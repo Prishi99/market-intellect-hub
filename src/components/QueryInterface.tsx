@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +6,9 @@ import { Separator } from "@/components/ui/separator";
 import { CircleDollarSign, Search, BarChart2, TrendingUp, FileText, Loader2 } from "lucide-react";
 import StockCard from "./StockCard";
 import { useToast } from "@/components/ui/use-toast";
+import ReactMarkdown from "react-markdown";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 const dummyStocks = [
   { symbol: "AAPL", name: "Apple Inc.", price: 175.04, change: 2.31, changePercent: 1.33, color: "green" },
@@ -128,6 +130,119 @@ For real-time market data and comprehensive analysis, our full version connects 
     }, 2000);
   };
 
+  // Helper function to render tables from markdown
+  const renderTable = (markdown) => {
+    if (!markdown.includes('|')) return null;
+    
+    const tableLines = markdown.split('\n').filter(line => line.includes('|'));
+    if (tableLines.length < 2) return null;
+    
+    const headers = tableLines[0].split('|').filter(col => col.trim()).map(col => col.trim());
+    const rows = tableLines.slice(2).map(line => 
+      line.split('|').filter(col => col.trim()).map(col => col.trim())
+    );
+    
+    return (
+      <div className="overflow-x-auto w-full rounded-lg border border-fin-100 mb-4">
+        <table className="w-full min-w-full divide-y divide-fin-100">
+          <thead className="bg-fin-50">
+            <tr>
+              {headers.map((header, i) => (
+                <th key={i} className="px-4 py-3 text-left text-xs font-medium text-fin-800 uppercase tracking-wider">
+                  {header}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-fin-100">
+            {rows.map((row, i) => (
+              <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-fin-50/30'}>
+                {row.map((cell, j) => (
+                  <td key={j} className="px-4 py-3 text-sm text-fin-800">
+                    {cell}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
+  // Helper function to extract sections from results
+  const renderFinancialInsights = () => {
+    if (!results) return null;
+    
+    // Extract sections like "Analyst Recommendations" and "Latest News"
+    const sections = results.split('##').filter(Boolean);
+    
+    if (sections.length <= 1) {
+      // If there are no clear sections, render everything as a single card
+      return (
+        <Card className="mb-6 border-fin-100 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xl text-fin-800">Financial Analysis</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ReactMarkdown components={{
+              p: ({node, ...props}) => <p className="text-foreground/80 mb-3" {...props} />,
+              strong: ({node, ...props}) => <span className="font-semibold text-fin-800" {...props} />,
+              h1: ({node, ...props}) => <h1 className="text-2xl font-bold mb-4 text-fin-800" {...props} />,
+              h2: ({node, ...props}) => <h2 className="text-xl font-bold mb-3 text-fin-700" {...props} />,
+              h3: ({node, ...props}) => <h3 className="text-lg font-semibold mb-2 text-fin-700" {...props} />,
+              ul: ({node, ...props}) => <ul className="list-disc pl-5 mb-4 space-y-1" {...props} />,
+              li: ({node, ...props}) => <li className="text-foreground/80" {...props} />,
+              a: ({node, ...props}) => <a className="text-fin-600 hover:underline" {...props} />,
+              table: ({node, ...props}) => renderTable(results) || <div>No table data available</div>
+            }}>
+              {results}
+            </ReactMarkdown>
+          </CardContent>
+        </Card>
+      );
+    }
+    
+    // Process multiple sections
+    return sections.map((section, index) => {
+      const sectionLines = section.trim().split('\n');
+      const title = sectionLines[0].trim();
+      const content = sectionLines.slice(1).join('\n').trim();
+      
+      // Special rendering for tables
+      const hasTable = content.includes('|');
+      
+      return (
+        <Card key={index} className="mb-6 border-fin-100 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xl text-fin-800">{title}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {hasTable && renderTable(content)}
+            
+            {!hasTable && (
+              <ReactMarkdown components={{
+                p: ({node, ...props}) => <p className="text-foreground/80 mb-3" {...props} />,
+                strong: ({node, ...props}) => <span className="font-semibold text-fin-800" {...props} />,
+                ul: ({node, ...props}) => <ul className="list-disc pl-5 mb-4 space-y-1" {...props} />,
+                li: ({node, ...props}) => <li className="text-foreground/80" {...props} />,
+                a: ({node, ...props}) => <a className="text-fin-600 hover:underline" {...props} />
+              }}>
+                {content}
+              </ReactMarkdown>
+            )}
+            
+            {title.toLowerCase().includes('news') && (
+              <div className="mt-2">
+                <Badge variant="outline" className="bg-fin-50 text-fin-700">Latest Updates</Badge>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      );
+    });
+  };
+
   return (
     <section id="demo" className="py-20 px-6">
       <div className="max-w-7xl mx-auto">
@@ -229,9 +344,7 @@ For real-time market data and comprehensive analysis, our full version connects 
                     </div>
                   ) : results ? (
                     <div className="prose prose-sm md:prose-base max-w-none">
-                      <div className="bg-white rounded-lg p-6 shadow-sm border border-fin-100/80">
-                        <div dangerouslySetInnerHTML={{ __html: results.replace(/\n/g, '<br>') }} />
-                      </div>
+                      {renderFinancialInsights()}
                     </div>
                   ) : (
                     <div className="h-96 flex flex-col items-center justify-center text-foreground/60">
