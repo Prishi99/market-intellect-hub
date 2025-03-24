@@ -1,7 +1,7 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ChartLineUp, Menu, X } from "lucide-react";
+import { BarChart3, Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const Header = () => {
@@ -29,7 +29,7 @@ const Header = () => {
     >
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         <a href="/" className="flex items-center gap-2 text-lg font-medium">
-          <ChartLineUp className="h-6 w-6 text-fin-600" />
+          <BarChart3 className="h-6 w-6 text-fin-600" />
           <span className="text-shimmer font-semibold">MarketMind</span>
         </a>
 
