@@ -3,12 +3,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { CircleDollarSign, Search, BarChart2, TrendingUp, FileText, Loader2 } from "lucide-react";
+import { CircleDollarSign, Search, BarChart2, TrendingUp, FileText, Loader2, AlertCircle } from "lucide-react";
 import StockCard from "./StockCard";
 import { useToast } from "@/components/ui/use-toast";
 import ReactMarkdown from "react-markdown";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { queryFinancialAI, fallbackToOpenAI } from "@/services/aiService";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import remarkGfm from "remark-gfm";
 
 const dummyStocks = [
   { symbol: "AAPL", name: "Apple Inc.", price: 175.04, change: 2.31, changePercent: 1.33, color: "green" },
@@ -22,67 +25,20 @@ const sampleNews = [
   { title: "Tesla Announces New Battery Technology", source: "Reuters", time: "1 day ago" }
 ];
 
-const sampleResponses = {
-  "NVDA": `
-## Analyst Recommendations for NVIDIA Corp (NVDA)
-
-| Recommendation | Count | Percentage |
-|---------------|-------|------------|
-| Strong Buy    | 35    | 76.1%      |
-| Buy           | 8     | 17.4%      |
-| Hold          | 3     | 6.5%       |
-| Sell          | 0     | 0%         |
-| Strong Sell   | 0     | 0%         |
-
-**Latest News:**
-1. NVIDIA reports record quarterly revenue of $26.0 billion, up 122% from a year ago
-2. Jensen Huang announces next-generation Blackwell architecture at GTC 2024
-3. NVIDIA partners with ServiceNow to accelerate enterprise AI adoption
-4. Company announces 10-for-1 stock split effective June 2024
-`,
-  "AAPL": `
-## Analyst Recommendations for Apple Inc (AAPL)
-
-| Recommendation | Count | Percentage |
-|---------------|-------|------------|
-| Strong Buy    | 24    | 54.5%      |
-| Buy           | 12    | 27.3%      |
-| Hold          | 7     | 15.9%      |
-| Sell          | 1     | 2.3%       |
-| Strong Sell   | 0     | 0%         |
-
-**Latest News:**
-1. Apple unveils new iPad Pro with M4 chip and OLED display
-2. Company reports Q2 revenue of $90.8 billion, slightly below analyst expectations
-3. Apple announces expansion of retail presence in emerging markets
-4. New Mac models expected to be announced at WWDC in June
-`,
-  "MSFT": `
-## Analyst Recommendations for Microsoft Corp (MSFT)
-
-| Recommendation | Count | Percentage |
-|---------------|-------|------------|
-| Strong Buy    | 29    | 65.9%      |
-| Buy           | 10    | 22.7%      |
-| Hold          | 5     | 11.4%      |
-| Sell          | 0     | 0%         |
-| Strong Sell   | 0     | 0%         |
-
-**Latest News:**
-1. Microsoft Fabric AI-powered data analytics platform now generally available
-2. Company reports 17% year-over-year revenue growth in latest quarter
-3. Microsoft expands Azure AI capabilities with new enterprise solutions
-4. Surface Laptop 7 and Surface Pro 11 announced with Qualcomm Snapdragon X processors
-`
-};
-
 const QueryInterface = () => {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const extractStockSymbol = (query: string): string | undefined => {
+    // Simple regex to find stock symbols in the query (uppercase letters surrounded by space, punctuation, or string boundaries)
+    const symbolMatches = query.match(/\b[A-Z]{1,5}\b/g);
+    return symbolMatches && symbolMatches.length > 0 ? symbolMatches[0] : undefined;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Check if query is empty
@@ -96,86 +52,47 @@ const QueryInterface = () => {
     }
     
     setLoading(true);
+    setError(null);
     
-    // Simulate API call with a delay
-    setTimeout(() => {
-      // Check if query contains any stock symbols we have sample data for
-      const queryUpper = query.toUpperCase();
+    try {
+      // Extract potential stock symbol from query
+      const stockSymbol = extractStockSymbol(query);
       
-      if (queryUpper.includes("NVDA")) {
-        setResults(sampleResponses.NVDA);
-      } else if (queryUpper.includes("AAPL")) {
-        setResults(sampleResponses.AAPL);
-      } else if (queryUpper.includes("MSFT")) {
-        setResults(sampleResponses.MSFT);
-      } else {
-        // Generic response for other queries
-        setResults(`
-# Market Analysis
-
-I've analyzed your query: "${query}"
-
-This appears to be about general market conditions or a symbol we don't have specific sample data for.
-
-For specific stock analysis, try queries like:
-- "Analyze NVDA stock performance"
-- "What are analyst recommendations for AAPL?"
-- "Latest news about MSFT"
-
-For real-time market data and comprehensive analysis, our full version connects to live financial APIs and web search capabilities.
-        `);
+      // First try with Gemini API
+      try {
+        const geminiResponse = await queryFinancialAI(query, stockSymbol);
+        setResults(geminiResponse.content);
+      } catch (geminiError) {
+        console.error("Gemini API failed, falling back to OpenAI:", geminiError);
+        toast({
+          title: "Switching to backup service",
+          description: "Primary service unavailable, using alternative AI service",
+          variant: "default",
+        });
+        
+        // Fallback to OpenAI
+        const openaiResponse = await fallbackToOpenAI(query, stockSymbol);
+        setResults(openaiResponse.content);
       }
-      
+    } catch (err) {
+      console.error("All AI services failed:", err);
+      setError("Unable to process your query at this time. Please try again later.");
+      toast({
+        title: "Service Unavailable",
+        description: "All AI services are currently unavailable. Please try again later.",
+        variant: "destructive",
+      });
+    } finally {
       setLoading(false);
-    }, 2000);
+    }
   };
 
-  // Helper function to render tables from markdown
-  const renderTable = (markdown) => {
-    if (!markdown.includes('|')) return null;
-    
-    const tableLines = markdown.split('\n').filter(line => line.includes('|'));
-    if (tableLines.length < 2) return null;
-    
-    const headers = tableLines[0].split('|').filter(col => col.trim()).map(col => col.trim());
-    const rows = tableLines.slice(2).map(line => 
-      line.split('|').filter(col => col.trim()).map(col => col.trim())
-    );
-    
-    return (
-      <div className="overflow-x-auto w-full rounded-lg border border-fin-100 mb-4">
-        <table className="w-full min-w-full divide-y divide-fin-100">
-          <thead className="bg-fin-50">
-            <tr>
-              {headers.map((header, i) => (
-                <th key={i} className="px-4 py-3 text-left text-xs font-medium text-fin-800 uppercase tracking-wider">
-                  {header}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-fin-100">
-            {rows.map((row, i) => (
-              <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-fin-50/30'}>
-                {row.map((cell, j) => (
-                  <td key={j} className="px-4 py-3 text-sm text-fin-800">
-                    {cell}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    );
-  };
-
-  // Helper function to extract sections from results
+  // Helper function to render markdown content professionally
   const renderFinancialInsights = () => {
     if (!results) return null;
     
-    // Extract sections like "Analyst Recommendations" and "Latest News"
-    const sections = results.split('##').filter(Boolean);
+    // Extract sections with ## headers if they exist
+    const sections = results.split(/^##\s+/m).filter(Boolean);
     
     if (sections.length <= 1) {
       // If there are no clear sections, render everything as a single card
@@ -185,17 +102,41 @@ For real-time market data and comprehensive analysis, our full version connects 
             <CardTitle className="text-xl text-fin-800">Financial Analysis</CardTitle>
           </CardHeader>
           <CardContent>
-            <ReactMarkdown components={{
-              p: ({node, ...props}) => <p className="text-foreground/80 mb-3" {...props} />,
-              strong: ({node, ...props}) => <span className="font-semibold text-fin-800" {...props} />,
-              h1: ({node, ...props}) => <h1 className="text-2xl font-bold mb-4 text-fin-800" {...props} />,
-              h2: ({node, ...props}) => <h2 className="text-xl font-bold mb-3 text-fin-700" {...props} />,
-              h3: ({node, ...props}) => <h3 className="text-lg font-semibold mb-2 text-fin-700" {...props} />,
-              ul: ({node, ...props}) => <ul className="list-disc pl-5 mb-4 space-y-1" {...props} />,
-              li: ({node, ...props}) => <li className="text-foreground/80" {...props} />,
-              a: ({node, ...props}) => <a className="text-fin-600 hover:underline" {...props} />,
-              table: ({node, ...props}) => renderTable(results) || <div>No table data available</div>
-            }}>
+            <ReactMarkdown 
+              remarkPlugins={[remarkGfm]}
+              components={{
+                p: ({node, ...props}) => <p className="text-foreground/80 mb-3" {...props} />,
+                strong: ({node, ...props}) => <span className="font-semibold text-fin-800" {...props} />,
+                h1: ({node, ...props}) => <h1 className="text-2xl font-bold mb-4 text-fin-800" {...props} />,
+                h2: ({node, ...props}) => <h2 className="text-xl font-bold mb-3 text-fin-700" {...props} />,
+                h3: ({node, ...props}) => <h3 className="text-lg font-semibold mb-2 text-fin-700" {...props} />,
+                ul: ({node, ...props}) => <ul className="list-disc pl-5 mb-4 space-y-1" {...props} />,
+                li: ({node, ...props}) => <li className="text-foreground/80" {...props} />,
+                a: ({node, ...props}) => <a className="text-fin-600 hover:underline" {...props} />,
+                table: ({node, ...props}) => (
+                  <div className="overflow-x-auto w-full rounded-lg border border-fin-100 mb-4">
+                    <Table>
+                      {props.children}
+                    </Table>
+                  </div>
+                ),
+                thead: ({node, ...props}) => <TableHeader>{props.children}</TableHeader>,
+                tbody: ({node, ...props}) => <TableBody>{props.children}</TableBody>,
+                tr: ({node, ...props}) => <TableRow>{props.children}</TableRow>,
+                th: ({node, ...props}) => <TableHead className="bg-fin-50 font-medium text-fin-800">{props.children}</TableHead>,
+                td: ({node, ...props}) => <TableCell className="py-3 text-sm text-fin-800">{props.children}</TableCell>,
+                code: ({node, inline, className, children, ...props}) => {
+                  if (inline) {
+                    return <code className="px-1 py-0.5 bg-fin-50 rounded text-fin-700 text-sm" {...props}>{children}</code>;
+                  }
+                  return (
+                    <pre className="p-4 bg-fin-50/50 rounded-lg overflow-x-auto border border-fin-100 mb-4">
+                      <code className="text-fin-800 text-sm" {...props}>{children}</code>
+                    </pre>
+                  );
+                }
+              }}
+            >
               {results}
             </ReactMarkdown>
           </CardContent>
@@ -205,12 +146,15 @@ For real-time market data and comprehensive analysis, our full version connects 
     
     // Process multiple sections
     return sections.map((section, index) => {
-      const sectionLines = section.trim().split('\n');
-      const title = sectionLines[0].trim();
-      const content = sectionLines.slice(1).join('\n').trim();
+      let title = "Financial Analysis";
+      let content = section;
       
-      // Special rendering for tables
-      const hasTable = content.includes('|');
+      // If this is not the first section (which doesn't have a ## prefix since we split on it)
+      if (index > 0 || sections[0].includes("\n")) {
+        const sectionLines = section.split("\n");
+        title = sectionLines[0].trim();
+        content = sectionLines.slice(1).join("\n").trim();
+      }
       
       return (
         <Card key={index} className="mb-6 border-fin-100 shadow-sm">
@@ -218,19 +162,43 @@ For real-time market data and comprehensive analysis, our full version connects 
             <CardTitle className="text-xl text-fin-800">{title}</CardTitle>
           </CardHeader>
           <CardContent>
-            {hasTable && renderTable(content)}
-            
-            {!hasTable && (
-              <ReactMarkdown components={{
+            <ReactMarkdown 
+              remarkPlugins={[remarkGfm]}
+              components={{
                 p: ({node, ...props}) => <p className="text-foreground/80 mb-3" {...props} />,
                 strong: ({node, ...props}) => <span className="font-semibold text-fin-800" {...props} />,
+                h1: ({node, ...props}) => <h1 className="text-2xl font-bold mb-4 text-fin-800" {...props} />,
+                h2: ({node, ...props}) => <h2 className="text-xl font-bold mb-3 text-fin-700" {...props} />,
+                h3: ({node, ...props}) => <h3 className="text-lg font-semibold mb-2 text-fin-700" {...props} />,
                 ul: ({node, ...props}) => <ul className="list-disc pl-5 mb-4 space-y-1" {...props} />,
                 li: ({node, ...props}) => <li className="text-foreground/80" {...props} />,
-                a: ({node, ...props}) => <a className="text-fin-600 hover:underline" {...props} />
-              }}>
-                {content}
-              </ReactMarkdown>
-            )}
+                a: ({node, ...props}) => <a className="text-fin-600 hover:underline" {...props} />,
+                table: ({node, ...props}) => (
+                  <div className="overflow-x-auto w-full rounded-lg border border-fin-100 mb-4">
+                    <Table>
+                      {props.children}
+                    </Table>
+                  </div>
+                ),
+                thead: ({node, ...props}) => <TableHeader>{props.children}</TableHeader>,
+                tbody: ({node, ...props}) => <TableBody>{props.children}</TableBody>,
+                tr: ({node, ...props}) => <TableRow>{props.children}</TableRow>,
+                th: ({node, ...props}) => <TableHead className="bg-fin-50 font-medium text-fin-800">{props.children}</TableHead>,
+                td: ({node, ...props}) => <TableCell className="py-3 text-sm text-fin-800">{props.children}</TableCell>,
+                code: ({node, inline, className, children, ...props}) => {
+                  if (inline) {
+                    return <code className="px-1 py-0.5 bg-fin-50 rounded text-fin-700 text-sm" {...props}>{children}</code>;
+                  }
+                  return (
+                    <pre className="p-4 bg-fin-50/50 rounded-lg overflow-x-auto border border-fin-100 mb-4">
+                      <code className="text-fin-800 text-sm" {...props}>{children}</code>
+                    </pre>
+                  );
+                }
+              }}
+            >
+              {content}
+            </ReactMarkdown>
             
             {title.toLowerCase().includes('news') && (
               <div className="mt-2">
@@ -341,6 +309,12 @@ For real-time market data and comprehensive analysis, our full version connects 
                       <Loader2 className="h-8 w-8 animate-spin mb-4 text-fin-600" />
                       <p>Analyzing financial data...</p>
                       <p className="text-sm text-foreground/50 mt-2">This may take a moment</p>
+                    </div>
+                  ) : error ? (
+                    <div className="h-96 flex flex-col items-center justify-center text-foreground/60">
+                      <AlertCircle className="h-8 w-8 mb-4 text-red-500" />
+                      <p>{error}</p>
+                      <p className="text-sm text-foreground/50 mt-2">Please try again later</p>
                     </div>
                   ) : results ? (
                     <div className="prose prose-sm md:prose-base max-w-none">
