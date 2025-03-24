@@ -11,9 +11,18 @@ export interface AIQueryResponse {
 
 export const queryFinancialAI = async (query: string, stockSymbol?: string): Promise<AIQueryResponse> => {
   try {
+    // Create a more specific prompt based on whether we have a stock symbol
     const prompt = stockSymbol 
-      ? `Please provide comprehensive financial analysis for ${stockSymbol}. Include analyst recommendations, latest news, market trends, and financial metrics if available. Format the response with markdown tables for data visualization.`
-      : `Please analyze the following financial query and provide detailed insights: ${query}. Include relevant market data, stock analysis, and news if applicable. Format the response with markdown tables for data visualization.`;
+      ? `Please provide comprehensive financial analysis for ${stockSymbol}. Include the following sections:
+         - Current Stock Price and Performance: Include the latest stock price, daily changes, and recent performance.
+         - Analyst Recommendations: Summarize current analyst ratings (buy, hold, sell) and price targets.
+         - Latest News: Share recent significant news events affecting the stock.
+         - Financial Metrics: Include key financial metrics like P/E ratio, market cap, revenue, and earnings.
+         - Technical Analysis: Brief overview of current technical indicators.
+         Format the response with markdown tables for data visualization where appropriate. Use ## headers to separate sections.`
+      : `Please analyze the following financial query and provide detailed insights: ${query}. Include relevant market data, stock analysis, and news if applicable. Format the response with markdown tables for data visualization where appropriate. Use ## headers to separate sections.`;
+
+    console.log("Querying Gemini API with prompt:", prompt);
 
     const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
       method: 'POST',
@@ -59,13 +68,19 @@ export const queryFinancialAI = async (query: string, stockSymbol?: string): Pro
     
     // Extract the text content from the response
     const content = data.candidates[0].content.parts[0].text;
+
+    // Extract any citation sources if they exist
+    const sourcesInfo = data.candidates[0].citationMetadata?.citationSources?.map(source => ({
+      name: source.uri.split('/').pop() || 'Source',
+      url: source.uri
+    }));
     
-    return { content };
+    return { content, sourcesInfo };
   } catch (error) {
     console.error("Error querying financial AI:", error);
     toast({
       title: "AI Query Failed",
-      description: "Could not process your query. Please try again later.",
+      description: "Could not process your query with Gemini. Trying backup service...",
       variant: "destructive",
     });
     throw error;
@@ -78,11 +93,19 @@ const OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
 
 export const fallbackToOpenAI = async (query: string, stockSymbol?: string): Promise<AIQueryResponse> => {
   try {
-    const systemPrompt = "You are a financial expert AI assistant. Provide comprehensive, detailed market analysis with accurate data. Format responses with markdown tables when presenting numerical data. Include current analyst recommendations, latest news, and market trends where applicable.";
+    const systemPrompt = "You are a financial expert AI assistant. Provide comprehensive, detailed market analysis with accurate data. Format responses with markdown tables when presenting numerical data. Include current analyst recommendations, latest news, and market trends where applicable. Structure your response with ## headers for different sections.";
     
     const userPrompt = stockSymbol 
-      ? `Provide detailed financial analysis for ${stockSymbol}. Include current analyst recommendations, price targets, latest news, earnings data, and key metrics. Format numerical data in markdown tables for clarity.`
-      : `Analyze the following financial query and provide detailed insights: ${query}. Include relevant market data, stock analysis, and news if applicable.`;
+      ? `Provide detailed financial analysis for ${stockSymbol}. Include these sections with ## headers:
+         ## Current Stock Price and Performance
+         ## Analyst Recommendations 
+         ## Latest News
+         ## Financial Metrics
+         ## Technical Analysis
+         Format numerical data in markdown tables for clarity.`
+      : `Analyze the following financial query and provide detailed insights: ${query}. Include relevant market data, stock analysis, and news if applicable. Structure your response with ## headers for different sections.`;
+
+    console.log("Querying OpenAI with prompt:", userPrompt);
 
     const response = await fetch(OPENAI_API_URL, {
       method: 'POST',

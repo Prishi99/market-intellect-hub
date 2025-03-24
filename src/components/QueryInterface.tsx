@@ -1,11 +1,12 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { CircleDollarSign, Search, BarChart2, TrendingUp, FileText, Loader2, AlertCircle } from "lucide-react";
 import StockCard from "./StockCard";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import ReactMarkdown from "react-markdown";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,24 +14,106 @@ import { queryFinancialAI, fallbackToOpenAI } from "@/services/aiService";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import remarkGfm from "remark-gfm";
 
-const dummyStocks = [
-  { symbol: "AAPL", name: "Apple Inc.", price: 175.04, change: 2.31, changePercent: 1.33, color: "green" },
-  { symbol: "MSFT", name: "Microsoft Corp.", price: 340.79, change: -1.25, changePercent: -0.37, color: "red" },
-  { symbol: "GOOGL", name: "Alphabet Inc.", price: 138.56, change: 0.78, changePercent: 0.57, color: "green" },
-];
+interface StockData {
+  symbol: string;
+  name: string;
+  price: number;
+  change: number;
+  changePercent: number;
+  color: string;
+}
 
-const sampleNews = [
+interface NewsItem {
+  title: string;
+  source: string;
+  time: string;
+}
+
+// Sample news for demonstration
+const sampleNews: NewsItem[] = [
   { title: "NVIDIA Reports Record Q2 Earnings", source: "Financial Times", time: "2 hours ago" },
   { title: "Fed Signals Potential Rate Cut in September", source: "Bloomberg", time: "5 hours ago" },
   { title: "Tesla Announces New Battery Technology", source: "Reuters", time: "1 day ago" }
 ];
+
+// Market indexes data structure
+interface MarketIndex {
+  name: string;
+  value: number;
+  change: number;
+}
 
 const QueryInterface = () => {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [stocks, setStocks] = useState<StockData[]>([]);
+  const [marketIndexes, setMarketIndexes] = useState<MarketIndex[]>([]);
+  const [stocksLoading, setStocksLoading] = useState(true);
   const { toast } = useToast();
+
+  // Fetch trending stocks data
+  useEffect(() => {
+    const fetchTrendingStocks = async () => {
+      setStocksLoading(true);
+      try {
+        // For demonstration, we'll use a mix of popular tech stocks
+        // In a production app, you would fetch this data from a financial API
+        const trending = [
+          { symbol: "AAPL", name: "Apple Inc." },
+          { symbol: "MSFT", name: "Microsoft Corp." },
+          { symbol: "GOOGL", name: "Alphabet Inc." },
+          { symbol: "AMZN", name: "Amazon.com Inc." },
+          { symbol: "NVDA", name: "NVIDIA Corp." },
+          { symbol: "TSLA", name: "Tesla Inc." }
+        ];
+        
+        // Generate semi-realistic stock data
+        const stocksWithData = trending.map(stock => {
+          // Generate random but realistic price, change values
+          const basePrice = stock.symbol === "AAPL" ? 175.04 : 
+                           stock.symbol === "MSFT" ? 340.79 : 
+                           stock.symbol === "GOOGL" ? 138.56 :
+                           stock.symbol === "AMZN" ? 128.85 :
+                           stock.symbol === "NVDA" ? 925.75 :
+                           stock.symbol === "TSLA" ? 175.43 : 100;
+          
+          const change = (Math.random() * 6) - 3; // Random between -3 and +3
+          const changePercent = (change / basePrice) * 100;
+          
+          return {
+            symbol: stock.symbol,
+            name: stock.name,
+            price: basePrice,
+            change,
+            changePercent,
+            color: change > 0 ? "green" : "red"
+          };
+        });
+        
+        setStocks(stocksWithData);
+        
+        // Generate market index data
+        setMarketIndexes([
+          { name: "S&P 500", value: 4782.15, change: 0.68 },
+          { name: "Dow Jones", value: 38563.35, change: 0.32 },
+          { name: "NASDAQ", value: 15203.78, change: -0.21 }
+        ]);
+      } catch (err) {
+        console.error("Error fetching stock data:", err);
+        toast({
+          title: "Error loading stock data",
+          description: "Could not load trending stocks. Please try again later.",
+          variant: "destructive",
+        });
+      } finally {
+        setStocksLoading(false);
+      }
+    };
+    
+    fetchTrendingStocks();
+  }, [toast]);
 
   const extractStockSymbol = (query: string): string | undefined => {
     // Simple regex to find stock symbols in the query (uppercase letters surrounded by space, punctuation, or string boundaries)
@@ -125,8 +208,11 @@ const QueryInterface = () => {
                 tr: ({node, ...props}) => <TableRow>{props.children}</TableRow>,
                 th: ({node, ...props}) => <TableHead className="bg-fin-50 font-medium text-fin-800">{props.children}</TableHead>,
                 td: ({node, ...props}) => <TableCell className="py-3 text-sm text-fin-800">{props.children}</TableCell>,
-                code: ({node, inline, className, children, ...props}) => {
-                  if (inline) {
+                code: ({node, className, children, ...props}) => {
+                  const match = /language-(\w+)/.exec(className || '');
+                  const isInline = !match && (props as any).inline;
+                  
+                  if (isInline) {
                     return <code className="px-1 py-0.5 bg-fin-50 rounded text-fin-700 text-sm" {...props}>{children}</code>;
                   }
                   return (
@@ -185,8 +271,11 @@ const QueryInterface = () => {
                 tr: ({node, ...props}) => <TableRow>{props.children}</TableRow>,
                 th: ({node, ...props}) => <TableHead className="bg-fin-50 font-medium text-fin-800">{props.children}</TableHead>,
                 td: ({node, ...props}) => <TableCell className="py-3 text-sm text-fin-800">{props.children}</TableCell>,
-                code: ({node, inline, className, children, ...props}) => {
-                  if (inline) {
+                code: ({node, className, children, ...props}) => {
+                  const match = /language-(\w+)/.exec(className || '');
+                  const isInline = !match && (props as any).inline;
+                  
+                  if (isInline) {
                     return <code className="px-1 py-0.5 bg-fin-50 rounded text-fin-700 text-sm" {...props}>{children}</code>;
                   }
                   return (
@@ -341,11 +430,17 @@ const QueryInterface = () => {
                       </Button>
                     </div>
                     
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                      {dummyStocks.map((stock) => (
-                        <StockCard key={stock.symbol} stock={stock} />
-                      ))}
-                    </div>
+                    {stocksLoading ? (
+                      <div className="h-40 flex items-center justify-center">
+                        <Loader2 className="h-6 w-6 animate-spin text-fin-600" />
+                      </div>
+                    ) : (
+                      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        {stocks.map((stock) => (
+                          <StockCard key={stock.symbol} stock={stock} />
+                        ))}
+                      </div>
+                    )}
                     
                     <div className="bg-white rounded-lg p-4 border border-fin-100">
                       <div className="flex items-center justify-between mb-4">
@@ -355,29 +450,25 @@ const QueryInterface = () => {
                         </h3>
                       </div>
                       
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between py-2 border-b border-fin-50">
-                          <div className="font-medium text-sm">S&P 500</div>
-                          <div className="flex items-center gap-2">
-                            <div className="font-medium">4,782.15</div>
-                            <div className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded">+0.68%</div>
-                          </div>
+                      {stocksLoading ? (
+                        <div className="h-20 flex items-center justify-center">
+                          <Loader2 className="h-5 w-5 animate-spin text-fin-600" />
                         </div>
-                        <div className="flex items-center justify-between py-2 border-b border-fin-50">
-                          <div className="font-medium text-sm">Dow Jones</div>
-                          <div className="flex items-center gap-2">
-                            <div className="font-medium">38,563.35</div>
-                            <div className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded">+0.32%</div>
-                          </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {marketIndexes.map((index, i) => (
+                            <div key={index.name} className={`flex items-center justify-between py-2 ${i < marketIndexes.length - 1 ? 'border-b border-fin-50' : ''}`}>
+                              <div className="font-medium text-sm">{index.name}</div>
+                              <div className="flex items-center gap-2">
+                                <div className="font-medium">{index.value.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                                <div className={`text-xs ${index.change >= 0 ? 'text-green-600 bg-green-50' : 'text-red-600 bg-red-50'} px-2 py-0.5 rounded`}>
+                                  {index.change >= 0 ? '+' : ''}{index.change.toFixed(2)}%
+                                </div>
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                        <div className="flex items-center justify-between py-2">
-                          <div className="font-medium text-sm">NASDAQ</div>
-                          <div className="flex items-center gap-2">
-                            <div className="font-medium">15,203.78</div>
-                            <div className="text-xs text-red-600 bg-red-50 px-2 py-0.5 rounded">-0.21%</div>
-                          </div>
-                        </div>
-                      </div>
+                      )}
                     </div>
                   </div>
                 </TabsContent>
