@@ -10,7 +10,13 @@ import { useToast } from "@/hooks/use-toast";
 import ReactMarkdown from "react-markdown";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { queryFinancialAI, fallbackToOpenAI } from "@/services/aiService";
+import { 
+  queryFinancialAI, 
+  fallbackToOpenAI, 
+  getTrendingStocksData, 
+  getMarketIndexData,
+  getFinancialNews
+} from "@/services/aiService";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import remarkGfm from "remark-gfm";
 
@@ -29,13 +35,6 @@ interface NewsItem {
   time: string;
 }
 
-// Sample news for demonstration
-const sampleNews: NewsItem[] = [
-  { title: "NVIDIA Reports Record Q2 Earnings", source: "Financial Times", time: "2 hours ago" },
-  { title: "Fed Signals Potential Rate Cut in September", source: "Bloomberg", time: "5 hours ago" },
-  { title: "Tesla Announces New Battery Technology", source: "Reuters", time: "1 day ago" }
-];
-
 // Market indexes data structure
 interface MarketIndex {
   name: string;
@@ -50,69 +49,88 @@ const QueryInterface = () => {
   const [error, setError] = useState<string | null>(null);
   const [stocks, setStocks] = useState<StockData[]>([]);
   const [marketIndexes, setMarketIndexes] = useState<MarketIndex[]>([]);
+  const [news, setNews] = useState<NewsItem[]>([]);
   const [stocksLoading, setStocksLoading] = useState(true);
+  const [newsLoading, setNewsLoading] = useState(true);
+  const [indexesLoading, setIndexesLoading] = useState(true);
   const { toast } = useToast();
 
-  // Fetch trending stocks data
+  // Fetch real-time market data
   useEffect(() => {
-    const fetchTrendingStocks = async () => {
+    const fetchMarketData = async () => {
       setStocksLoading(true);
+      setIndexesLoading(true);
+      setNewsLoading(true);
+      
       try {
-        // For demonstration, we'll use a mix of popular tech stocks
-        // In a production app, you would fetch this data from a financial API
-        const trending = [
-          { symbol: "AAPL", name: "Apple Inc." },
-          { symbol: "MSFT", name: "Microsoft Corp." },
-          { symbol: "GOOGL", name: "Alphabet Inc." },
-          { symbol: "AMZN", name: "Amazon.com Inc." },
-          { symbol: "NVDA", name: "NVIDIA Corp." },
-          { symbol: "TSLA", name: "Tesla Inc." }
-        ];
-        
-        // Generate semi-realistic stock data
-        const stocksWithData = trending.map(stock => {
-          // Generate random but realistic price, change values
-          const basePrice = stock.symbol === "AAPL" ? 175.04 : 
-                           stock.symbol === "MSFT" ? 340.79 : 
-                           stock.symbol === "GOOGL" ? 138.56 :
-                           stock.symbol === "AMZN" ? 128.85 :
-                           stock.symbol === "NVDA" ? 925.75 :
-                           stock.symbol === "TSLA" ? 175.43 : 100;
-          
-          const change = (Math.random() * 6) - 3; // Random between -3 and +3
-          const changePercent = (change / basePrice) * 100;
-          
-          return {
-            symbol: stock.symbol,
-            name: stock.name,
-            price: basePrice,
-            change,
-            changePercent,
-            color: change > 0 ? "green" : "red"
-          };
+        // Fetch trending stocks
+        const stocksData = await getTrendingStocksData();
+        setStocks(stocksData);
+      } catch (err) {
+        console.error("Error fetching stock data:", err);
+        toast({
+          title: "Error loading stock data",
+          description: "Could not load trending stocks. Using sample data instead.",
+          variant: "destructive",
         });
         
-        setStocks(stocksWithData);
+        // Fallback to sample data
+        const sampleStocks = [
+          { symbol: "AAPL", name: "Apple Inc.", price: 175.04, change: 0.65, changePercent: 0.37, color: "green" },
+          { symbol: "MSFT", name: "Microsoft Corp.", price: 340.79, change: -1.23, changePercent: -0.36, color: "red" },
+          { symbol: "GOOGL", name: "Alphabet Inc.", price: 138.56, change: 0.89, changePercent: 0.65, color: "green" },
+          { symbol: "AMZN", name: "Amazon.com Inc.", price: 128.85, change: 1.56, changePercent: 1.22, color: "green" },
+          { symbol: "NVDA", name: "NVIDIA Corp.", price: 925.75, change: -2.25, changePercent: -0.24, color: "red" },
+          { symbol: "TSLA", name: "Tesla Inc.", price: 175.43, change: -3.22, changePercent: -1.8, color: "red" }
+        ];
+        setStocks(sampleStocks);
+      } finally {
+        setStocksLoading(false);
+      }
+      
+      try {
+        // Fetch market indexes
+        const indexData = await getMarketIndexData();
+        setMarketIndexes(indexData);
+      } catch (err) {
+        console.error("Error fetching market index data:", err);
         
-        // Generate market index data
+        // Fallback to sample data
         setMarketIndexes([
           { name: "S&P 500", value: 4782.15, change: 0.68 },
           { name: "Dow Jones", value: 38563.35, change: 0.32 },
           { name: "NASDAQ", value: 15203.78, change: -0.21 }
         ]);
-      } catch (err) {
-        console.error("Error fetching stock data:", err);
-        toast({
-          title: "Error loading stock data",
-          description: "Could not load trending stocks. Please try again later.",
-          variant: "destructive",
-        });
       } finally {
-        setStocksLoading(false);
+        setIndexesLoading(false);
+      }
+      
+      try {
+        // Fetch financial news
+        const newsData = await getFinancialNews();
+        setNews(newsData);
+      } catch (err) {
+        console.error("Error fetching news data:", err);
+        
+        // Fallback to sample data
+        setNews([
+          { title: "Federal Reserve Signals Interest Rate Decision", source: "Financial Times", time: "2 hours ago" },
+          { title: "Major Tech Stocks Rally on Earnings Reports", source: "Bloomberg", time: "4 hours ago" },
+          { title: "Oil Prices Fluctuate Amid Global Supply Concerns", source: "Reuters", time: "6 hours ago" },
+          { title: "Retail Sales Data Exceeds Analyst Expectations", source: "CNBC", time: "8 hours ago" },
+          { title: "Cryptocurrency Market Sees Significant Volatility", source: "WSJ", time: "10 hours ago" }
+        ]);
+      } finally {
+        setNewsLoading(false);
       }
     };
     
-    fetchTrendingStocks();
+    fetchMarketData();
+    
+    // Refresh data every 5 minutes
+    const refreshInterval = setInterval(fetchMarketData, 5 * 60 * 1000);
+    
+    return () => clearInterval(refreshInterval);
   }, [toast]);
 
   const extractStockSymbol = (query: string): string | undefined => {
@@ -149,7 +167,7 @@ const QueryInterface = () => {
         console.error("Gemini API failed, falling back to OpenAI:", geminiError);
         toast({
           title: "Switching to backup service",
-          description: "Primary service unavailable, using alternative AI service",
+          description: "Primary service unavailable, using alternative AI service with web search",
           variant: "default",
         });
         
@@ -450,7 +468,7 @@ const QueryInterface = () => {
                         </h3>
                       </div>
                       
-                      {stocksLoading ? (
+                      {indexesLoading ? (
                         <div className="h-20 flex items-center justify-center">
                           <Loader2 className="h-5 w-5 animate-spin text-fin-600" />
                         </div>
@@ -476,18 +494,25 @@ const QueryInterface = () => {
                 <TabsContent value="market" className="mt-0">
                   <div className="bg-white rounded-lg p-6 border border-fin-100">
                     <h3 className="text-sm font-medium mb-4">Latest Market News</h3>
-                    <div className="space-y-4">
-                      {sampleNews.map((item, index) => (
-                        <div key={index} className="border-b border-fin-50 pb-4 last:border-0 last:pb-0">
-                          <h4 className="font-medium mb-1">{item.title}</h4>
-                          <div className="flex items-center text-xs text-foreground/60">
-                            <span>{item.source}</span>
-                            <Separator orientation="vertical" className="mx-2 h-3" />
-                            <span>{item.time}</span>
+                    
+                    {newsLoading ? (
+                      <div className="h-40 flex items-center justify-center">
+                        <Loader2 className="h-5 w-5 animate-spin text-fin-600" />
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {news.map((item, index) => (
+                          <div key={index} className="border-b border-fin-50 pb-4 last:border-0 last:pb-0">
+                            <h4 className="font-medium mb-1">{item.title}</h4>
+                            <div className="flex items-center text-xs text-foreground/60">
+                              <span>{item.source}</span>
+                              <Separator orientation="vertical" className="mx-2 h-3" />
+                              <span>{item.time}</span>
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </TabsContent>
               </Tabs>
