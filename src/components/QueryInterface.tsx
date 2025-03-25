@@ -1,10 +1,9 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { CircleDollarSign, Search, BarChart2, TrendingUp, FileText, Loader2, AlertCircle } from "lucide-react";
+import { CircleDollarSign, Search, BarChart2, TrendingUp, FileText, Loader2, AlertCircle, RefreshCw } from "lucide-react";
 import StockCard from "./StockCard";
 import { useToast } from "@/hooks/use-toast";
 import ReactMarkdown from "react-markdown";
@@ -12,7 +11,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
   queryFinancialAI, 
-  fallbackToOpenAI, 
   getTrendingStocksData, 
   getMarketIndexData,
   getFinancialNews
@@ -53,85 +51,76 @@ const QueryInterface = () => {
   const [stocksLoading, setStocksLoading] = useState(true);
   const [newsLoading, setNewsLoading] = useState(true);
   const [indexesLoading, setIndexesLoading] = useState(true);
+  const [dataRefreshing, setDataRefreshing] = useState(false);
   const { toast } = useToast();
 
   // Fetch real-time market data
-  useEffect(() => {
-    const fetchMarketData = async () => {
+  const fetchMarketData = async (showToast = false) => {
+    if (showToast) {
+      setDataRefreshing(true);
+      toast({
+        title: "Refreshing Market Data",
+        description: "Fetching the latest financial information...",
+      });
+    } else {
       setStocksLoading(true);
       setIndexesLoading(true);
       setNewsLoading(true);
-      
-      try {
-        // Fetch trending stocks
-        const stocksData = await getTrendingStocksData();
-        setStocks(stocksData);
-      } catch (err) {
-        console.error("Error fetching stock data:", err);
+    }
+    
+    try {
+      // Fetch trending stocks
+      const stocksData = await getTrendingStocksData();
+      setStocks(stocksData);
+      if (showToast) {
+        toast({
+          title: "Stocks Data Updated",
+          description: "Latest stock information has been loaded.",
+        });
+      }
+    } catch (err) {
+      console.error("Error fetching stock data:", err);
+      if (showToast) {
         toast({
           title: "Error loading stock data",
-          description: "Could not load trending stocks. Using sample data instead.",
+          description: "Could not refresh stock data. Using cached data instead.",
           variant: "destructive",
         });
-        
-        // Fallback to sample data
-        const sampleStocks = [
-          { symbol: "AAPL", name: "Apple Inc.", price: 175.04, change: 0.65, changePercent: 0.37, color: "green" },
-          { symbol: "MSFT", name: "Microsoft Corp.", price: 340.79, change: -1.23, changePercent: -0.36, color: "red" },
-          { symbol: "GOOGL", name: "Alphabet Inc.", price: 138.56, change: 0.89, changePercent: 0.65, color: "green" },
-          { symbol: "AMZN", name: "Amazon.com Inc.", price: 128.85, change: 1.56, changePercent: 1.22, color: "green" },
-          { symbol: "NVDA", name: "NVIDIA Corp.", price: 925.75, change: -2.25, changePercent: -0.24, color: "red" },
-          { symbol: "TSLA", name: "Tesla Inc.", price: 175.43, change: -3.22, changePercent: -1.8, color: "red" }
-        ];
-        setStocks(sampleStocks);
-      } finally {
-        setStocksLoading(false);
       }
-      
-      try {
-        // Fetch market indexes
-        const indexData = await getMarketIndexData();
-        setMarketIndexes(indexData);
-      } catch (err) {
-        console.error("Error fetching market index data:", err);
-        
-        // Fallback to sample data
-        setMarketIndexes([
-          { name: "S&P 500", value: 4782.15, change: 0.68 },
-          { name: "Dow Jones", value: 38563.35, change: 0.32 },
-          { name: "NASDAQ", value: 15203.78, change: -0.21 }
-        ]);
-      } finally {
-        setIndexesLoading(false);
-      }
-      
-      try {
-        // Fetch financial news
-        const newsData = await getFinancialNews();
-        setNews(newsData);
-      } catch (err) {
-        console.error("Error fetching news data:", err);
-        
-        // Fallback to sample data
-        setNews([
-          { title: "Federal Reserve Signals Interest Rate Decision", source: "Financial Times", time: "2 hours ago" },
-          { title: "Major Tech Stocks Rally on Earnings Reports", source: "Bloomberg", time: "4 hours ago" },
-          { title: "Oil Prices Fluctuate Amid Global Supply Concerns", source: "Reuters", time: "6 hours ago" },
-          { title: "Retail Sales Data Exceeds Analyst Expectations", source: "CNBC", time: "8 hours ago" },
-          { title: "Cryptocurrency Market Sees Significant Volatility", source: "WSJ", time: "10 hours ago" }
-        ]);
-      } finally {
-        setNewsLoading(false);
-      }
-    };
+    } finally {
+      setStocksLoading(false);
+    }
     
+    try {
+      // Fetch market indexes
+      const indexData = await getMarketIndexData();
+      setMarketIndexes(indexData);
+    } catch (err) {
+      console.error("Error fetching market index data:", err);
+    } finally {
+      setIndexesLoading(false);
+    }
+    
+    try {
+      // Fetch financial news
+      const newsData = await getFinancialNews();
+      setNews(newsData);
+    } catch (err) {
+      console.error("Error fetching news data:", err);
+    } finally {
+      setNewsLoading(false);
+      setDataRefreshing(false);
+    }
+  };
+  
+  useEffect(() => {
     fetchMarketData();
     
     // Refresh data every 5 minutes
-    const refreshInterval = setInterval(fetchMarketData, 5 * 60 * 1000);
+    const refreshInterval = setInterval(() => fetchMarketData(), 5 * 60 * 1000);
     
     return () => clearInterval(refreshInterval);
-  }, [toast]);
+  }, []);
 
   const extractStockSymbol = (query: string): string | undefined => {
     // Simple regex to find stock symbols in the query (uppercase letters surrounded by space, punctuation, or string boundaries)
@@ -159,30 +148,36 @@ const QueryInterface = () => {
       // Extract potential stock symbol from query
       const stockSymbol = extractStockSymbol(query);
       
-      // First try with Gemini API
+      // Use Gemini API for financial analysis
       try {
-        const geminiResponse = await queryFinancialAI(query, stockSymbol);
-        setResults(geminiResponse.content);
-      } catch (geminiError) {
-        console.error("Gemini API failed, falling back to OpenAI:", geminiError);
         toast({
-          title: "Switching to backup service",
-          description: "Primary service unavailable, using alternative AI service with web search",
-          variant: "default",
+          title: "Analyzing Financial Data",
+          description: stockSymbol 
+            ? `Gathering real-time data for ${stockSymbol}...` 
+            : "Processing your financial query...",
         });
         
-        // Fallback to OpenAI
-        const openaiResponse = await fallbackToOpenAI(query, stockSymbol);
-        setResults(openaiResponse.content);
+        const response = await queryFinancialAI(query, stockSymbol);
+        setResults(response.content);
+        
+        toast({
+          title: "Analysis Complete",
+          description: stockSymbol 
+            ? `Analysis for ${stockSymbol} is ready` 
+            : "Your financial insights are ready",
+        });
+      } catch (err) {
+        console.error("AI service failed:", err);
+        setError("Unable to process your query at this time. Please try again later.");
+        toast({
+          title: "Service Unavailable",
+          description: "AI financial analysis service is currently unavailable. Please try again later.",
+          variant: "destructive",
+        });
       }
     } catch (err) {
-      console.error("All AI services failed:", err);
+      console.error("Query failed:", err);
       setError("Unable to process your query at this time. Please try again later.");
-      toast({
-        title: "Service Unavailable",
-        description: "All AI services are currently unavailable. Please try again later.",
-        variant: "destructive",
-      });
     } finally {
       setLoading(false);
     }
@@ -398,17 +393,34 @@ const QueryInterface = () => {
 
             <div className="lg:col-span-3 p-6 bg-fin-50/30">
               <Tabs defaultValue="results" className="w-full">
-                <TabsList className="mb-6 bg-fin-100/50">
-                  <TabsTrigger value="results" className="data-[state=active]:bg-white">
-                    Results
-                  </TabsTrigger>
-                  <TabsTrigger value="stocks" className="data-[state=active]:bg-white">
-                    Stocks
-                  </TabsTrigger>
-                  <TabsTrigger value="market" className="data-[state=active]:bg-white">
-                    Market News
-                  </TabsTrigger>
-                </TabsList>
+                <div className="flex items-center justify-between mb-6">
+                  <TabsList className="bg-fin-100/50">
+                    <TabsTrigger value="results" className="data-[state=active]:bg-white">
+                      Results
+                    </TabsTrigger>
+                    <TabsTrigger value="stocks" className="data-[state=active]:bg-white">
+                      Stocks
+                    </TabsTrigger>
+                    <TabsTrigger value="market" className="data-[state=active]:bg-white">
+                      Market News
+                    </TabsTrigger>
+                  </TabsList>
+                  
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => fetchMarketData(true)}
+                    disabled={dataRefreshing}
+                    className="text-xs text-fin-600"
+                  >
+                    {dataRefreshing ? (
+                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-3 w-3 mr-1" />
+                    )}
+                    Refresh Data
+                  </Button>
+                </div>
                 
                 <TabsContent value="results" className="mt-0">
                   {loading ? (
