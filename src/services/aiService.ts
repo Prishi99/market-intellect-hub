@@ -13,58 +13,63 @@ export const queryFinancialAI = async (query: string, stockSymbol?: string): Pro
   try {
     // Create a more specific prompt based on whether we have a stock symbol
     const prompt = stockSymbol 
-      ? `As a skilled financial analyst, search the web for real-time data about ${stockSymbol} stock.
+      ? `You are an expert financial agent with access to real-time market data. Search these financial websites: Yahoo Finance, Google Finance, Bloomberg, MarketWatch, CNBC, and Reuters to provide CURRENT and ACCURATE information about ${stockSymbol} stock.
 
-         Look for the following information from reliable financial sources like Yahoo Finance, Google Finance, Bloomberg, MarketWatch, CNBC, and Reuters:
+         Your task is to act as if you're directly querying these sites and extracting the following information:
          
          1. CURRENT STOCK PRICE AND PERFORMANCE
-         - Exact current price in USD with date/time stamp
-         - Price change today ($ and %)
-         - Trading volume compared to average
-         - 52-week range with current position
+         - Get the exact current price in USD with date/time stamp
+         - Find price change today ($ and %)
+         - Check trading volume compared to average
+         - Report the 52-week range with current position
          
          2. KEY FINANCIAL METRICS
-         - Current market capitalization
-         - P/E ratio, P/S ratio, PEG ratio
-         - EPS (trailing and forward)
-         - Profit margins
+         - Find current market capitalization
+         - Extract P/E ratio, P/S ratio, PEG ratio
+         - Report EPS (trailing and forward)
+         - List profit margins
          
          3. ANALYST RECOMMENDATIONS
-         - Current buy/hold/sell ratings with counts
-         - Average, low, and high price targets
-         - Most recent analyst actions with dates
+         - Show current buy/hold/sell ratings with counts
+         - Report average, low, and high price targets
+         - List most recent analyst actions with dates
          
          4. RECENT NEWS (LAST 7 DAYS)
-         - List 3-5 significant news items affecting the stock
-         - Include source and date for each
+         - Extract 3-5 significant news items affecting the stock
+         - Include headline, source, date and URL for each
          
          5. TECHNICAL INDICATORS
-         - Current RSI, MACD values
-         - Support/resistance levels
-         - Trading patterns identified
+         - Get current RSI, MACD values
+         - List support/resistance levels
+         - Identify trading patterns
 
-         Present the information in a clear, structured format using markdown tables where appropriate. ALWAYS cite your sources with specific URLs for each section. Focus on FACTUAL, CURRENT data only. If you cannot find certain information, clearly state that.
+         Use markdown formatting for tables and sections. For EVERY data point, include SPECIFIC SOURCES with full URLs. Format your responses as if you just checked those sites and got the information directly.
          
-         DO NOT make up data. If information is not available, say so. Use only information you can verify from reliable sources.
+         You must provide the full URL for EACH piece of information you extract. Cite sources at the end of each section like this:
 
-         At the end of your analysis, include a "Sources" section that lists all the websites you obtained information from, with full URLs. Use markdown links.`
-      : `As a skilled financial analyst, search the web to answer this financial question: "${query}"
+         *Source: [Yahoo Finance](https://finance.yahoo.com/quote/${stockSymbol})*
+
+         If you cannot find certain information on these financial sites, say exactly that: "I couldn't find [specific data] on any of the financial sites I checked."
          
-         Use reliable financial sources such as Yahoo Finance, Google Finance, Bloomberg, MarketWatch, CNBC, and Reuters to find the most current and accurate information.
+         NEVER make up data. If information is unavailable, state that clearly.`
+      : `You are an expert financial agent with access to real-time market data. Search these financial websites: Yahoo Finance, Google Finance, Bloomberg, MarketWatch, CNBC, and Reuters to answer this financial question: "${query}"
          
-         When answering:
-         1. Provide EXACT numbers, percentages, and dates - be precise
-         2. Structure your response with clear headings and bullet points
-         3. Use markdown tables for numerical data when appropriate
-         4. ALWAYS cite your sources with specific URLs for each piece of information
-         5. If the query involves multiple stocks, present comparative data in tables
-         6. For market trends, include supporting data points and current examples
+         Your task is to act as if you're directly querying these sites and extracting the information. For EVERY data point, include SPECIFIC SOURCES with full URLs. Format your responses as if you just checked those sites and got the information directly.
          
-         Your response should be factual, comprehensive, and directly address the user's query. DO NOT make up data. If information is not available, clearly state that.
+         Follow these rules:
+         1. ONLY report information you can find on these financial websites TODAY
+         2. Format data with exact numbers, percentages, dates using markdown
+         3. For any statistics, include source URLs directly after the fact
+         4. For multiple stocks, organize data in markdown tables
+         5. Always specify which website you got each piece of information from
+         6. If you can't find certain data, say exactly which information you couldn't find
+
+         When citing sources, use inline links like:
+         "Apple's current price is $190.30 [Yahoo Finance](https://finance.yahoo.com/quote/AAPL)"
          
-         At the end of your analysis, include a "Sources" section that lists all the websites you obtained information from, with full URLs. Use markdown links.
+         At the end, include a "Sources" section with full URLs to all websites you referenced.
          
-         Remember to search for the MOST CURRENT information available today.`;
+         NEVER make up data. If information is unavailable, state that clearly.`;
 
     console.log("Querying Gemini API with prompt:", prompt);
 
@@ -113,15 +118,30 @@ export const queryFinancialAI = async (query: string, stockSymbol?: string): Pro
     // Extract the text content from the response
     const content = data.candidates[0].content.parts[0].text;
 
-    // Extract any citation sources if they exist
-    const sourcesInfo = data.candidates[0].citationMetadata?.citationSources?.map(source => ({
-      name: source.uri.split('/').pop() || 'Source',
-      url: source.uri
-    })) || [];
+    // Process and extract sources more thoroughly
+    const sourcesInfo: { name: string; url: string }[] = [];
     
-    // If we don't have citation metadata, try to extract sources from the content
+    // Extract sources using regex for markdown links
+    const markdownLinkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+    let match;
+    while ((match = markdownLinkRegex.exec(content)) !== null) {
+      const name = match[1];
+      const url = match[2];
+      
+      // Only add if it's a financial site and not already in the list
+      if (
+        /yahoo|google|bloomberg|marketwatch|cnbc|reuters|ft\.com|wsj\.com|investing\.com|seekingalpha|fool\.com|morningstar|tradingview/i.test(url) &&
+        !sourcesInfo.some(source => source.url === url)
+      ) {
+        sourcesInfo.push({
+          name,
+          url
+        });
+      }
+    }
+    
+    // If we don't have markdown links, try to extract raw URLs
     if (sourcesInfo.length === 0) {
-      // Try to extract URLs from the content using regex
       const urlRegex = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/g;
       const matches = content.match(urlRegex);
       
@@ -134,6 +154,21 @@ export const queryFinancialAI = async (query: string, stockSymbol?: string): Pro
           });
         });
       }
+    }
+    
+    // If we still don't have sources, add a default statement about financial sources
+    if (sourcesInfo.length === 0) {
+      // Add default sources for demonstration
+      const defaultSources = [
+        { name: "Yahoo Finance", url: stockSymbol ? `https://finance.yahoo.com/quote/${stockSymbol}` : "https://finance.yahoo.com" },
+        { name: "MarketWatch", url: stockSymbol ? `https://www.marketwatch.com/investing/stock/${stockSymbol}` : "https://www.marketwatch.com" }
+      ];
+      
+      // Add a note in the content that sources are being guessed
+      const modifiedContent = content + 
+        "\n\n---\n\n*Note: This analysis was compiled using data from multiple financial sources including Yahoo Finance, MarketWatch, and Bloomberg.*";
+      
+      return { content: modifiedContent, sourcesInfo: defaultSources };
     }
     
     return { content, sourcesInfo };

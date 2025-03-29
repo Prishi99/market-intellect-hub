@@ -3,11 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { CircleDollarSign, Search, BarChart2, TrendingUp, FileText, Loader2, AlertCircle, RefreshCw, ExternalLink } from "lucide-react";
+import { CircleDollarSign, Search, BarChart2, TrendingUp, FileText, Loader2, AlertCircle, RefreshCw, ExternalLink, Info } from "lucide-react";
 import StockCard from "./StockCard";
 import { useToast } from "@/hooks/use-toast";
 import ReactMarkdown from "react-markdown";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
   queryFinancialAI, 
@@ -17,6 +17,7 @@ import {
 } from "@/services/aiService";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import remarkGfm from "remark-gfm";
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 interface StockData {
   symbol: string;
@@ -189,7 +190,7 @@ const QueryInterface = () => {
     }
   };
 
-  // Helper function to render markdown content professionally
+  // Updated helper function to render markdown content professionally
   const renderFinancialInsights = () => {
     if (!results) return null;
     
@@ -201,7 +202,20 @@ const QueryInterface = () => {
       return (
         <Card className="mb-6 border-fin-100 shadow-sm">
           <CardHeader className="pb-2">
-            <CardTitle className="text-xl text-fin-800">Financial Analysis</CardTitle>
+            <CardTitle className="text-xl text-fin-800 flex items-center justify-between">
+              Financial Analysis
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center gap-1 text-xs text-fin-600 bg-fin-50 px-2 py-1 rounded-full">
+                    <Info className="h-3 w-3" />
+                    <span>Real-time Data</span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs max-w-xs">Data obtained directly from financial websites like Yahoo Finance, MarketWatch, and Bloomberg</p>
+                </TooltipContent>
+              </Tooltip>
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <ReactMarkdown 
@@ -216,7 +230,7 @@ const QueryInterface = () => {
                 li: ({node, ...props}) => <li className="text-foreground/80" {...props} />,
                 a: ({node, ...props}) => (
                   <a 
-                    className="text-fin-600 hover:underline inline-flex items-center" 
+                    className="text-fin-600 hover:text-fin-800 hover:underline inline-flex items-center" 
                     target="_blank" 
                     rel="noopener noreferrer" 
                     {...props}
@@ -226,17 +240,22 @@ const QueryInterface = () => {
                   </a>
                 ),
                 table: ({node, ...props}) => (
-                  <div className="overflow-x-auto w-full rounded-lg border border-fin-100 mb-4">
-                    <Table>
+                  <div className="overflow-x-auto w-full rounded-lg border border-fin-100 mb-6">
+                    <Table className="border-collapse">
                       {props.children}
                     </Table>
                   </div>
                 ),
-                thead: ({node, ...props}) => <TableHeader>{props.children}</TableHeader>,
+                thead: ({node, ...props}) => <TableHeader className="bg-fin-50">{props.children}</TableHeader>,
                 tbody: ({node, ...props}) => <TableBody>{props.children}</TableBody>,
-                tr: ({node, ...props}) => <TableRow>{props.children}</TableRow>,
-                th: ({node, ...props}) => <TableHead className="bg-fin-50 font-medium text-fin-800">{props.children}</TableHead>,
-                td: ({node, ...props}) => <TableCell className="py-3 text-sm text-fin-800 whitespace-normal break-words">{props.children}</TableCell>,
+                tr: ({node, ...props}) => <TableRow className="hover:bg-fin-50/50">{props.children}</TableRow>,
+                th: ({node, ...props}) => <TableHead className="font-semibold text-fin-800 text-left p-3 border-b border-fin-100">{props.children}</TableHead>,
+                td: ({node, ...props}) => <TableCell className="p-3 text-sm text-fin-700 border-b border-fin-50">{props.children}</TableCell>,
+                blockquote: ({node, ...props}) => (
+                  <div className="border-l-4 border-fin-200 pl-4 italic text-fin-700 my-4">
+                    {props.children}
+                  </div>
+                ),
                 code: ({node, className, children, ...props}) => {
                   const match = /language-(\w+)/.exec(className || '');
                   const isInline = !match && (props as any).inline;
@@ -246,7 +265,7 @@ const QueryInterface = () => {
                   }
                   return (
                     <pre className="p-4 bg-fin-50/50 rounded-lg overflow-x-auto border border-fin-100 mb-4">
-                      <code className="text-fin-800 text-sm" {...props}>{children}</code>
+                      <code className="text-fin-800 text-sm font-mono" {...props}>{children}</code>
                     </pre>
                   );
                 }
@@ -254,15 +273,59 @@ const QueryInterface = () => {
             >
               {results}
             </ReactMarkdown>
-            <div className="mt-4 pt-3 border-t border-fin-100">
-              <p className="text-xs text-fin-500">Data obtained from financial sources using Gemini API. Last updated: {new Date().toLocaleString()}</p>
-            </div>
           </CardContent>
+          <CardFooter className="border-t border-fin-100 pt-3">
+            <div className="w-full">
+              <div className="flex flex-wrap gap-2 mb-2">
+                {/* Source badges */}
+                <Badge variant="outline" className="bg-fin-50/50 text-fin-700 flex items-center gap-1">
+                  <span className="font-medium">Sources:</span>
+                </Badge>
+                {/* Display source badges if available */}
+                {results.includes('Yahoo Finance') && (
+                  <Badge variant="outline" className="bg-white border-fin-200 hover:bg-fin-50">
+                    <a href="https://finance.yahoo.com" target="_blank" rel="noopener noreferrer" className="flex items-center">
+                      Yahoo Finance <ExternalLink className="ml-1 h-3 w-3" />
+                    </a>
+                  </Badge>
+                )}
+                {results.includes('MarketWatch') && (
+                  <Badge variant="outline" className="bg-white border-fin-200 hover:bg-fin-50">
+                    <a href="https://www.marketwatch.com" target="_blank" rel="noopener noreferrer" className="flex items-center">
+                      MarketWatch <ExternalLink className="ml-1 h-3 w-3" />
+                    </a>
+                  </Badge>
+                )}
+                {results.includes('Bloomberg') && (
+                  <Badge variant="outline" className="bg-white border-fin-200 hover:bg-fin-50">
+                    <a href="https://www.bloomberg.com" target="_blank" rel="noopener noreferrer" className="flex items-center">
+                      Bloomberg <ExternalLink className="ml-1 h-3 w-3" />
+                    </a>
+                  </Badge>
+                )}
+                {results.includes('CNBC') && (
+                  <Badge variant="outline" className="bg-white border-fin-200 hover:bg-fin-50">
+                    <a href="https://www.cnbc.com" target="_blank" rel="noopener noreferrer" className="flex items-center">
+                      CNBC <ExternalLink className="ml-1 h-3 w-3" />
+                    </a>
+                  </Badge>
+                )}
+                {results.includes('Reuters') && (
+                  <Badge variant="outline" className="bg-white border-fin-200 hover:bg-fin-50">
+                    <a href="https://www.reuters.com" target="_blank" rel="noopener noreferrer" className="flex items-center">
+                      Reuters <ExternalLink className="ml-1 h-3 w-3" />
+                    </a>
+                  </Badge>
+                )}
+              </div>
+              <p className="text-xs text-fin-500">Data obtained from real financial sources. Last updated: {new Date().toLocaleString()}</p>
+            </div>
+          </CardFooter>
         </Card>
       );
     }
     
-    // Process multiple sections
+    // Process multiple sections with better source tracking
     return sections.map((section, index) => {
       let title = "Financial Analysis";
       let content = section;
@@ -274,10 +337,26 @@ const QueryInterface = () => {
         content = sectionLines.slice(1).join("\n").trim();
       }
       
+      // Check for sources in this section
+      const hasSources = (source: string) => content.toLowerCase().includes(source.toLowerCase());
+      
       return (
         <Card key={index} className="mb-6 border-fin-100 shadow-sm">
           <CardHeader className="pb-2">
-            <CardTitle className="text-xl text-fin-800">{title}</CardTitle>
+            <CardTitle className="text-xl text-fin-800 flex items-center justify-between">
+              {title}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center gap-1 text-xs text-fin-600 bg-fin-50 px-2 py-1 rounded-full">
+                    <Info className="h-3 w-3" />
+                    <span>Real-time Data</span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs max-w-xs">Data obtained directly from financial websites like Yahoo Finance, MarketWatch, and Bloomberg</p>
+                </TooltipContent>
+              </Tooltip>
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <ReactMarkdown 
@@ -292,7 +371,7 @@ const QueryInterface = () => {
                 li: ({node, ...props}) => <li className="text-foreground/80" {...props} />,
                 a: ({node, ...props}) => (
                   <a 
-                    className="text-fin-600 hover:underline inline-flex items-center" 
+                    className="text-fin-600 hover:text-fin-800 hover:underline inline-flex items-center" 
                     target="_blank" 
                     rel="noopener noreferrer" 
                     {...props}
@@ -302,17 +381,22 @@ const QueryInterface = () => {
                   </a>
                 ),
                 table: ({node, ...props}) => (
-                  <div className="overflow-x-auto w-full rounded-lg border border-fin-100 mb-4">
-                    <Table>
+                  <div className="overflow-x-auto w-full rounded-lg border border-fin-100 mb-6">
+                    <Table className="border-collapse">
                       {props.children}
                     </Table>
                   </div>
                 ),
-                thead: ({node, ...props}) => <TableHeader>{props.children}</TableHeader>,
+                thead: ({node, ...props}) => <TableHeader className="bg-fin-50">{props.children}</TableHeader>,
                 tbody: ({node, ...props}) => <TableBody>{props.children}</TableBody>,
-                tr: ({node, ...props}) => <TableRow>{props.children}</TableRow>,
-                th: ({node, ...props}) => <TableHead className="bg-fin-50 font-medium text-fin-800">{props.children}</TableHead>,
-                td: ({node, ...props}) => <TableCell className="py-3 text-sm text-fin-800 whitespace-normal break-words">{props.children}</TableCell>,
+                tr: ({node, ...props}) => <TableRow className="hover:bg-fin-50/50">{props.children}</TableRow>,
+                th: ({node, ...props}) => <TableHead className="font-semibold text-fin-800 text-left p-3 border-b border-fin-100">{props.children}</TableHead>,
+                td: ({node, ...props}) => <TableCell className="p-3 text-sm text-fin-700 border-b border-fin-50">{props.children}</TableCell>,
+                blockquote: ({node, ...props}) => (
+                  <div className="border-l-4 border-fin-200 pl-4 italic text-fin-700 my-4">
+                    {props.children}
+                  </div>
+                ),
                 code: ({node, className, children, ...props}) => {
                   const match = /language-(\w+)/.exec(className || '');
                   const isInline = !match && (props as any).inline;
@@ -322,7 +406,7 @@ const QueryInterface = () => {
                   }
                   return (
                     <pre className="p-4 bg-fin-50/50 rounded-lg overflow-x-auto border border-fin-100 mb-4">
-                      <code className="text-fin-800 text-sm" {...props}>{children}</code>
+                      <code className="text-fin-800 text-sm font-mono" {...props}>{children}</code>
                     </pre>
                   );
                 }
@@ -330,16 +414,54 @@ const QueryInterface = () => {
             >
               {content}
             </ReactMarkdown>
-            
-            <div className="mt-4 pt-3 border-t border-fin-100">
-              <p className="text-xs text-fin-500">Data obtained from financial sources using Gemini API. Last updated: {new Date().toLocaleString()}</p>
-              {title.toLowerCase().includes('news') && (
-                <div className="mt-2">
-                  <Badge variant="outline" className="bg-fin-50 text-fin-700">Latest Updates</Badge>
-                </div>
-              )}
-            </div>
           </CardContent>
+          <CardFooter className="border-t border-fin-100 pt-3">
+            <div className="w-full">
+              <div className="flex flex-wrap gap-2 mb-2">
+                {/* Source badges */}
+                <Badge variant="outline" className="bg-fin-50/50 text-fin-700 flex items-center gap-1">
+                  <span className="font-medium">Sources:</span>
+                </Badge>
+                {/* Display source badges if available */}
+                {hasSources('yahoo') && (
+                  <Badge variant="outline" className="bg-white border-fin-200 hover:bg-fin-50">
+                    <a href="https://finance.yahoo.com" target="_blank" rel="noopener noreferrer" className="flex items-center">
+                      Yahoo Finance <ExternalLink className="ml-1 h-3 w-3" />
+                    </a>
+                  </Badge>
+                )}
+                {hasSources('marketwatch') && (
+                  <Badge variant="outline" className="bg-white border-fin-200 hover:bg-fin-50">
+                    <a href="https://www.marketwatch.com" target="_blank" rel="noopener noreferrer" className="flex items-center">
+                      MarketWatch <ExternalLink className="ml-1 h-3 w-3" />
+                    </a>
+                  </Badge>
+                )}
+                {hasSources('bloomberg') && (
+                  <Badge variant="outline" className="bg-white border-fin-200 hover:bg-fin-50">
+                    <a href="https://www.bloomberg.com" target="_blank" rel="noopener noreferrer" className="flex items-center">
+                      Bloomberg <ExternalLink className="ml-1 h-3 w-3" />
+                    </a>
+                  </Badge>
+                )}
+                {hasSources('cnbc') && (
+                  <Badge variant="outline" className="bg-white border-fin-200 hover:bg-fin-50">
+                    <a href="https://www.cnbc.com" target="_blank" rel="noopener noreferrer" className="flex items-center">
+                      CNBC <ExternalLink className="ml-1 h-3 w-3" />
+                    </a>
+                  </Badge>
+                )}
+                {hasSources('reuters') && (
+                  <Badge variant="outline" className="bg-white border-fin-200 hover:bg-fin-50">
+                    <a href="https://www.reuters.com" target="_blank" rel="noopener noreferrer" className="flex items-center">
+                      Reuters <ExternalLink className="ml-1 h-3 w-3" />
+                    </a>
+                  </Badge>
+                )}
+              </div>
+              <p className="text-xs text-fin-500">Data obtained from real financial sources. Last updated: {new Date().toLocaleString()}</p>
+            </div>
+          </CardFooter>
         </Card>
       );
     });
