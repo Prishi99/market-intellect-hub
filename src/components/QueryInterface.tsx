@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -123,9 +124,15 @@ const QueryInterface = () => {
   }, []);
 
   const extractStockSymbol = (query: string): string | undefined => {
-    // Simple regex to find stock symbols in the query (uppercase letters surrounded by space, punctuation, or string boundaries)
-    const symbolMatches = query.match(/\b[A-Z]{1,5}\b/g);
-    return symbolMatches && symbolMatches.length > 0 ? symbolMatches[0] : undefined;
+    // Enhanced regex to find stock symbols in the query
+    // Look for ticker patterns like $AAPL or (AAPL) or just AAPL
+    const symbolMatches = query.match(/\$([A-Z]{1,5})\b|\(([A-Z]{1,5})\)|\b([A-Z]{1,5})\b/g);
+    
+    if (!symbolMatches) return undefined;
+    
+    // Clean up the matches to get just the symbol
+    const cleanSymbol = symbolMatches[0].replace(/[\$\(\)]/g, '');
+    return cleanSymbol;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -151,27 +158,27 @@ const QueryInterface = () => {
       // Use Gemini API for financial analysis
       try {
         toast({
-          title: "Analyzing Financial Data",
+          title: "Searching Financial Data",
           description: stockSymbol 
-            ? `Gathering real-time data for ${stockSymbol}...` 
-            : "Processing your financial query...",
+            ? `Finding real-time data for ${stockSymbol}...` 
+            : "Analyzing your financial query...",
         });
         
         const response = await queryFinancialAI(query, stockSymbol);
         setResults(response.content);
         
         toast({
-          title: "Analysis Complete",
+          title: "Financial Analysis Complete",
           description: stockSymbol 
-            ? `Analysis for ${stockSymbol} is ready` 
+            ? `Latest data for ${stockSymbol} retrieved` 
             : "Your financial insights are ready",
         });
       } catch (err) {
         console.error("AI service failed:", err);
-        setError("Unable to process your query at this time. Please try again later.");
+        setError("Unable to retrieve current financial data. Please try again later.");
         toast({
-          title: "Service Unavailable",
-          description: "AI financial analysis service is currently unavailable. Please try again later.",
+          title: "Data Service Unavailable",
+          description: "Financial data service is currently unavailable. Please try again later.",
           variant: "destructive",
         });
       }
@@ -319,11 +326,11 @@ const QueryInterface = () => {
         <div className="text-center mb-12">
           <div className="inline-flex items-center px-3 py-1.5 border border-fin-200 rounded-full bg-fin-50/50 mb-4">
             <CircleDollarSign className="h-4 w-4 text-fin-600 mr-2" />
-            <span className="text-xs font-medium text-fin-800">Financial AI Assistant</span>
+            <span className="text-xs font-medium text-fin-800">Expert Financial AI Assistant</span>
           </div>
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">Ask Anything About Stocks</h2>
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">Financial Expert at Your Service</h2>
           <p className="text-foreground/70 max-w-2xl mx-auto">
-            Get real-time market insights, analyst recommendations, and financial news with our AI-powered assistant.
+            Get accurate, real-time market insights, analyst recommendations, and financial news with our AI-powered analysis tool.
           </p>
         </div>
 
@@ -333,12 +340,12 @@ const QueryInterface = () => {
               <form onSubmit={handleSubmit} className="mb-8">
                 <div className="flex flex-col gap-4">
                   <label htmlFor="query" className="text-sm font-medium">
-                    Your Question
+                    Your Financial Question
                   </label>
                   <div className="relative">
                     <Input
                       id="query"
-                      placeholder="e.g., Summarize analyst recommendations for NVDA"
+                      placeholder="e.g., What is the current price of NVDA stock?"
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
                       className="bg-white/40 border-fin-200 pr-10"
@@ -354,10 +361,10 @@ const QueryInterface = () => {
                       {loading ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Processing...
+                          Analyzing Data...
                         </>
                       ) : (
-                        "Get Insights"
+                        "Get Financial Analysis"
                       )}
                     </Button>
                   </div>
@@ -366,25 +373,25 @@ const QueryInterface = () => {
 
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-sm font-medium mb-3">Sample Queries</h3>
+                  <h3 className="text-sm font-medium mb-3">Sample Financial Queries</h3>
                   <div className="space-y-2">
                     <button
-                      onClick={() => setQuery("Summarize analyst recommendations and share the latest news for NVDA.")}
+                      onClick={() => setQuery("What is the current price and analyst recommendations for NVDA?")}
                       className="w-full text-left p-3 rounded-lg border border-fin-200 bg-white/40 hover:bg-fin-50 transition-colors text-sm"
                     >
-                      Summarize analyst recommendations and share the latest news for NVDA.
+                      What is the current price and analyst recommendations for NVDA?
                     </button>
                     <button
-                      onClick={() => setQuery("What are the latest analyst ratings for AAPL and how have they changed?")}
+                      onClick={() => setQuery("Compare the current financial metrics of AAPL and MSFT")}
                       className="w-full text-left p-3 rounded-lg border border-fin-200 bg-white/40 hover:bg-fin-50 transition-colors text-sm"
                     >
-                      What are the latest analyst ratings for AAPL and how have they changed?
+                      Compare the current financial metrics of AAPL and MSFT
                     </button>
                     <button
-                      onClick={() => setQuery("Compare the fundamentals of MSFT and GOOGL.")}
+                      onClick={() => setQuery("What are the key technical indicators for TSLA stock today?")}
                       className="w-full text-left p-3 rounded-lg border border-fin-200 bg-white/40 hover:bg-fin-50 transition-colors text-sm"
                     >
-                      Compare the fundamentals of MSFT and GOOGL.
+                      What are the key technical indicators for TSLA stock today?
                     </button>
                   </div>
                 </div>
@@ -396,13 +403,13 @@ const QueryInterface = () => {
                 <div className="flex items-center justify-between mb-6">
                   <TabsList className="bg-fin-100/50">
                     <TabsTrigger value="results" className="data-[state=active]:bg-white">
-                      Results
+                      Analysis
                     </TabsTrigger>
                     <TabsTrigger value="stocks" className="data-[state=active]:bg-white">
-                      Stocks
+                      Market Data
                     </TabsTrigger>
                     <TabsTrigger value="market" className="data-[state=active]:bg-white">
-                      Market News
+                      Financial News
                     </TabsTrigger>
                   </TabsList>
                   
@@ -418,7 +425,7 @@ const QueryInterface = () => {
                     ) : (
                       <RefreshCw className="h-3 w-3 mr-1" />
                     )}
-                    Refresh Data
+                    Update Market Data
                   </Button>
                 </div>
                 
@@ -426,14 +433,14 @@ const QueryInterface = () => {
                   {loading ? (
                     <div className="h-96 flex flex-col items-center justify-center text-foreground/60">
                       <Loader2 className="h-8 w-8 animate-spin mb-4 text-fin-600" />
-                      <p>Analyzing financial data...</p>
+                      <p>Retrieving real-time financial data...</p>
                       <p className="text-sm text-foreground/50 mt-2">This may take a moment</p>
                     </div>
                   ) : error ? (
                     <div className="h-96 flex flex-col items-center justify-center text-foreground/60">
                       <AlertCircle className="h-8 w-8 mb-4 text-red-500" />
                       <p>{error}</p>
-                      <p className="text-sm text-foreground/50 mt-2">Please try again later</p>
+                      <p className="text-sm text-foreground/50 mt-2">Please try a different query or try again later</p>
                     </div>
                   ) : results ? (
                     <div className="prose prose-sm md:prose-base max-w-none">
@@ -442,8 +449,8 @@ const QueryInterface = () => {
                   ) : (
                     <div className="h-96 flex flex-col items-center justify-center text-foreground/60">
                       <FileText className="h-8 w-8 mb-4 text-fin-300" />
-                      <p>Your query results will appear here</p>
-                      <p className="text-sm text-foreground/50 mt-2">Try one of the sample queries</p>
+                      <p>Ask a financial question to get started</p>
+                      <p className="text-sm text-foreground/50 mt-2">Get real-time stock data, market analysis, and financial insights</p>
                     </div>
                   )}
                 </TabsContent>

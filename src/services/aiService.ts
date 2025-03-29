@@ -13,48 +13,54 @@ export const queryFinancialAI = async (query: string, stockSymbol?: string): Pro
   try {
     // Create a more specific prompt based on whether we have a stock symbol
     const prompt = stockSymbol 
-      ? `Please search the web and provide real-time financial analysis for ${stockSymbol}.
-         Access Bloomberg, Yahoo Finance, MarketWatch, CNBC, Reuters, and other financial data sources to find the MOST CURRENT data available.
-         Provide ONLY factual, verifiable information based on TODAY'S MARKET DATA.
+      ? `As a skilled financial analyst, search the web for real-time data about ${stockSymbol} stock.
+
+         Look for the following information from reliable financial sources like Yahoo Finance, Google Finance, Bloomberg, MarketWatch, CNBC, and Reuters:
          
-         ## Current Stock Price and Performance
-         - Today's exact price in USD
-         - Precise price change (dollar and percentage)
-         - Today's trading volume
-         - Current 52-week range
+         1. CURRENT STOCK PRICE AND PERFORMANCE
+         - Exact current price in USD with date/time stamp
+         - Price change today ($ and %)
+         - Trading volume compared to average
+         - 52-week range with current position
          
-         ## Analyst Recommendations
-         - Current consensus ratings with exact counts
-         - Current price targets (low, average, high)
-         - Most recent analyst actions with firm names and dates
+         2. KEY FINANCIAL METRICS
+         - Current market capitalization
+         - P/E ratio, P/S ratio, PEG ratio
+         - EPS (trailing and forward)
+         - Profit margins
          
-         ## Latest News
-         - Include 3-5 specific news items from today or this week
-         - Include sources and dates for each news item
+         3. ANALYST RECOMMENDATIONS
+         - Current buy/hold/sell ratings with counts
+         - Average, low, and high price targets
+         - Most recent analyst actions with dates
          
-         ## Financial Metrics
-         - Current P/E ratio
-         - Current market cap
-         - Most recent quarterly revenue and EPS
+         4. RECENT NEWS (LAST 7 DAYS)
+         - List 3-5 significant news items affecting the stock
+         - Include source and date for each
          
-         ## Technical Analysis
-         - Key support/resistance levels
+         5. TECHNICAL INDICATORS
          - Current RSI, MACD values
+         - Support/resistance levels
+         - Trading patterns identified
+
+         Present the information in a clear, structured format using markdown tables where appropriate. ALWAYS cite your sources with specific URLs. Focus on FACTUAL, CURRENT data only. If you cannot find certain information, clearly state that.
          
-         Format all numerical data in markdown tables. All information MUST be factual and based on real-time data.`
-      : `Please search the web for real-time financial data to answer this query: "${query}"
+         DO NOT make up data. If information is not available, say so. Use only information you can verify from reliable sources.`
+      : `As a skilled financial analyst, search the web to answer this financial question: "${query}"
          
-         Access Bloomberg, Yahoo Finance, MarketWatch, CNBC, Reuters, and other financial data sources to find the MOST CURRENT market data available.
-         Provide ONLY factual, verifiable information based on TODAY'S MARKET DATA.
+         Use reliable financial sources such as Yahoo Finance, Google Finance, Bloomberg, MarketWatch, CNBC, and Reuters to find the most current and accurate information.
          
-         Include specific numbers, dates, and sources:
-         - Exact current prices of any relevant stocks/indices
-         - Precise percentage changes
-         - Actual trading volumes
-         - Specific analyst ratings with firm names
-         - Recent market news with sources and dates
+         When answering:
+         1. Provide EXACT numbers, percentages, and dates - be precise
+         2. Structure your response with clear headings and bullet points
+         3. Use markdown tables for numerical data when appropriate
+         4. ALWAYS cite your sources with specific URLs for each piece of information
+         5. If the query involves multiple stocks, present comparative data in tables
+         6. For market trends, include supporting data points and current examples
          
-         Format all numerical data in markdown tables. All information MUST be factual and based on real-time data.`;
+         Your response should be factual, comprehensive, and directly address the user's query. DO NOT make up data. If information is not available, clearly state that.
+         
+         Remember to search for the MOST CURRENT information available today.`;
 
     console.log("Querying Gemini API with prompt:", prompt);
 
@@ -74,7 +80,7 @@ export const queryFinancialAI = async (query: string, stockSymbol?: string): Pro
           }
         ],
         generationConfig: {
-          temperature: 0.1, // Lower temperature for more focused, factual responses
+          temperature: 0.1,
           topP: 0.95,
           topK: 40,
           maxOutputTokens: 2048,
@@ -124,9 +130,10 @@ export const queryFinancialAI = async (query: string, stockSymbol?: string): Pro
 // Helper function to get current stock data for trending stocks
 export const getTrendingStocksData = async () => {
   try {
-    // Use Gemini API to get trending stocks data
-    const prompt = `Please search the web for the CURRENT price data of these popular stocks: AAPL, MSFT, GOOGL, AMZN, NVDA, TSLA. 
-    Access Yahoo Finance, MarketWatch, or other reliable financial websites to get the MOST UP-TO-DATE data.
+    // Create a specific prompt for getting accurate stock data
+    const prompt = `As a financial analyst with access to real-time market data, search the web for the CURRENT EXACT price data of these popular stocks: AAPL, MSFT, GOOGL, AMZN, NVDA, TSLA.
+    
+    Search Yahoo Finance, MarketWatch, Google Finance, or other reliable financial websites to get the MOST UP-TO-DATE data as of today.
     
     Return ONLY a JSON array with this exact structure:
     [
@@ -134,7 +141,14 @@ export const getTrendingStocksData = async () => {
       {"symbol":"MSFT","name":"Microsoft Corp.","price":234.56,"change":2.34,"changePercent":2.34}
     ]
     
-    Provide ONLY the JSON array with REAL-TIME data. No explanatory text.`;
+    Rules:
+    1. The data MUST be from today
+    2. The values MUST be exact (use actual decimal places, not rounded numbers)
+    3. Include ALL six stocks in the response
+    4. Format as a proper JSON array with NO additional text
+    5. Ensure the "change" is the dollar amount change and "changePercent" is the percentage change
+    
+    Provide ONLY the JSON array. No explanatory text.`;
     
     console.log("Fetching trending stocks with Gemini API");
     
@@ -210,9 +224,10 @@ export const getTrendingStocksData = async () => {
 // Helper function to get market index data
 export const getMarketIndexData = async () => {
   try {
-    // Use Gemini API to get market index data
-    const prompt = `Please search the web for the CURRENT data of major market indices: S&P 500, Dow Jones, NASDAQ.
-    Access Yahoo Finance, MarketWatch, or other reliable financial websites to get the MOST UP-TO-DATE data.
+    // Create a specific prompt for getting accurate market index data
+    const prompt = `As a financial analyst with access to real-time market data, search the web for the CURRENT EXACT values of these major market indices: S&P 500, Dow Jones Industrial Average, NASDAQ Composite.
+    
+    Search Yahoo Finance, MarketWatch, Google Finance, or other reliable financial websites to get the MOST UP-TO-DATE data as of today.
     
     Return ONLY a JSON array with this exact structure:
     [
@@ -221,7 +236,14 @@ export const getMarketIndexData = async () => {
       {"name":"NASDAQ","value":14000.00,"change":1.50}
     ]
     
-    Provide ONLY the JSON array with REAL-TIME data. No explanatory text.`;
+    Rules:
+    1. The data MUST be from today
+    2. The values MUST be exact (use actual decimal places, not rounded numbers)
+    3. Include ALL three indices in the response
+    4. Format as a proper JSON array with NO additional text
+    5. Ensure the "change" is the percentage change, not the point change
+    
+    Provide ONLY the JSON array. No explanatory text.`;
     
     console.log("Fetching market indices with Gemini API");
     
@@ -290,17 +312,26 @@ export const getMarketIndexData = async () => {
 // Helper function to get financial news
 export const getFinancialNews = async () => {
   try {
-    // Use Gemini API to get financial news
-    const prompt = `Please search the web for TODAY'S latest financial and market news.
-    Access CNBC, Bloomberg, Reuters, WSJ, or other reliable financial news sources.
+    // Create a specific prompt for getting accurate financial news
+    const prompt = `As a financial analyst with access to real-time news, search the web for TODAY'S MOST SIGNIFICANT financial and market news stories.
+    
+    Search Reuters, CNBC, Bloomberg, Financial Times, Wall Street Journal, or other reliable financial news sources to get the MOST UP-TO-DATE news as of today.
     
     Return ONLY a JSON array with this exact structure:
     [
-      {"title":"News Title 1","source":"Source Name","time":"Time Period"},
-      {"title":"News Title 2","source":"Source Name","time":"Time Period"}
+      {"title":"Exact News Headline","source":"Exact Source Name","time":"Time Period (e.g., '2 hours ago', 'Today 9:45 AM ET')"},
+      {"title":"Another News Headline","source":"Source Name","time":"Time Period"}
     ]
     
-    Find 5 of the MOST RECENT and IMPORTANT financial news stories from TODAY.
+    Rules:
+    1. The news MUST be from today only
+    2. Focus on MAJOR market-moving stories (Fed decisions, earnings reports, major economic data)
+    3. Include EXACTLY 5 news items
+    4. Format as a proper JSON array with NO additional text
+    5. Use EXACT headlines as they appear on the source sites
+    6. Include the EXACT publication source
+    7. Include SPECIFIC time information relative to now
+    
     Provide ONLY the JSON array. No explanatory text.`;
     
     console.log("Fetching financial news with Gemini API");
@@ -368,4 +399,3 @@ export const getFinancialNews = async () => {
     ];
   }
 };
-

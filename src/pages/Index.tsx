@@ -9,42 +9,42 @@ import { ArrowUpRight, Check, BarChart4, LineChart, TrendingUp, Lightbulb } from
 const features = [
   {
     icon: LineChart,
-    title: "Real-time Market Data",
-    description: "Access up-to-the-minute data on stocks, ETFs, and market indices to make informed decisions.",
+    title: "Real-time Financial Data",
+    description: "Access up-to-the-minute stock prices, market indices, and trading data from reliable financial sources.",
   },
   {
     icon: TrendingUp,
-    title: "Expert Analysis",
-    description: "Get comprehensive analyst ratings and recommendations from top financial institutions.",
+    title: "Expert Market Analysis",
+    description: "Get comprehensive analyst ratings, price targets, and technical indicators from top financial institutions.",
   },
   {
     icon: Lightbulb,
     title: "AI-Powered Insights",
-    description: "Our AI assistant analyzes patterns and provides personalized investment insights.",
+    description: "Our advanced AI analyzes patterns across multiple financial data sources to provide accurate market insights.",
   },
   {
     icon: BarChart4,
-    title: "Financial Reports",
-    description: "Access detailed company fundamentals, earnings reports, and financial metrics.",
+    title: "Comprehensive Financial Reports",
+    description: "Access detailed company fundamentals, earnings data, and key financial metrics from trusted sources.",
   },
 ];
 
 const faqItems = [
   {
-    question: "How accurate is the financial data?",
-    answer: "Our platform sources data from multiple reliable financial APIs and services to ensure high accuracy. Stock prices and market data are typically refreshed in real-time or with minimal delay depending on your subscription plan."
+    question: "How accurate is your financial data?",
+    answer: "Our platform retrieves real-time data directly from reliable financial sources like Yahoo Finance, Google Finance, Bloomberg, and CNBC using advanced search technology. The information is typically accurate to within minutes of the current market situation."
   },
   {
     question: "Can I use this for investment decisions?",
-    answer: "While our platform provides comprehensive market analysis and insights, it's designed to be an informational tool only. Always consult with a certified financial advisor before making investment decisions."
+    answer: "While our platform provides comprehensive market data and analysis, it's designed to be an informational tool only. Always consult with a certified financial advisor before making investment decisions."
   },
   {
-    question: "What financial APIs do you use?",
-    answer: "We integrate with several leading financial data providers including Yahoo Finance, Alpha Vantage, and Finnhub to provide comprehensive market coverage and ensure data reliability."
+    question: "What financial data sources do you use?",
+    answer: "Our AI searches and aggregates information from multiple trusted financial sources including Yahoo Finance, MarketWatch, Bloomberg, CNBC, Reuters, and other reputable financial news and data providers."
   },
   {
-    question: "How is the AI model trained?",
-    answer: "Our AI model is trained on vast amounts of historical market data, financial news, and analyst reports. It's continuously updated to improve accuracy and adapt to changing market conditions."
+    question: "How is the AI financial analysis performed?",
+    answer: "Our system uses Gemini technology to search the web for the most current financial information, extract relevant data points, and present them in an organized, easy-to-understand format with proper sourcing."
   },
 ];
 
@@ -60,9 +60,9 @@ const Index = () => {
       <section id="features" className="py-20 px-6" ref={featureRef.ref}>
         <div className={`max-w-7xl mx-auto transition-all duration-700 ${featureRef.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Powerful Financial Intelligence</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Real-Time Financial Intelligence</h2>
             <p className="text-foreground/70 max-w-2xl mx-auto">
-              Our platform combines cutting-edge AI with comprehensive financial data to deliver actionable insights.
+              Our platform combines advanced AI with comprehensive financial data sources to deliver accurate, up-to-date market insights.
             </p>
           </div>
           
@@ -86,18 +86,18 @@ const Index = () => {
             <div className="grid md:grid-cols-5">
               <div className="md:col-span-3 p-8 md:p-10">
                 <h3 className="text-2xl font-bold mb-4">
-                  Advanced Features for <span className="text-shimmer">Serious Investors</span>
+                  Financial Insights for <span className="text-shimmer">Smart Investors</span>
                 </h3>
                 <p className="text-foreground/70 mb-6">
-                  Take your investment strategy to the next level with our premium features designed for professional traders and serious investors.
+                  Get accurate, real-time financial data and expert analysis to make more informed investment decisions.
                 </p>
                 
                 <div className="space-y-4">
                   {[
-                    "Advanced technical indicators and chart patterns",
-                    "Customizable alerts and notifications",
-                    "Portfolio tracking and performance analytics",
-                    "Integration with major trading platforms"
+                    "Real-time stock prices and market index data",
+                    "Comprehensive analyst ratings and price targets",
+                    "Latest breaking financial news and market-moving events",
+                    "Key technical indicators and financial metrics"
                   ].map((item, index) => (
                     <div key={index} className="flex items-start">
                       <div className="flex-shrink-0 mt-1">
@@ -110,10 +110,10 @@ const Index = () => {
                 
                 <div className="mt-8">
                   <a 
-                    href="#"
+                    href="#demo"
                     className="inline-flex items-center text-fin-600 font-medium hover:text-fin-700 transition-colors"
                   >
-                    Learn more about premium features
+                    Try our financial assistant now
                     <ArrowUpRight className="h-4 w-4 ml-1" />
                   </a>
                 </div>
@@ -121,13 +121,13 @@ const Index = () => {
               
               <div className="md:col-span-2 bg-gradient-to-br from-fin-600 to-fin-800 p-8 md:p-10 text-white flex items-center">
                 <div>
-                  <h4 className="text-xl font-semibold mb-4">Early Access Program</h4>
+                  <h4 className="text-xl font-semibold mb-4">Financial Expert AI</h4>
                   <p className="mb-6 text-white/80">
-                    Join our early access program and be the first to try our advanced AI-powered financial tools.
+                    Ask any financial question and get accurate, real-time data from trusted sources - just like having your own financial analyst.
                   </p>
                   <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full border border-white/20">
                     <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
-                    <span className="text-sm">Currently in beta</span>
+                    <span className="text-sm">Powered by advanced AI</span>
                   </div>
                 </div>
               </div>
@@ -165,23 +165,23 @@ const Index = () => {
         <div className="max-w-7xl mx-auto">
           <div className="bg-gradient-to-r from-fin-600 to-fin-700 rounded-xl text-white p-10 md:p-16 text-center">
             <h2 className="text-3xl md:text-4xl font-bold mb-6">
-              Ready to Transform Your Financial Research?
+              Expert Financial Intelligence at Your Fingertips
             </h2>
             <p className="text-white/80 max-w-2xl mx-auto mb-10">
-              Join thousands of investors who are leveraging AI-powered insights to make smarter investment decisions.
+              Join investors who are leveraging our AI-powered financial assistant to get accurate, real-time market insights.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <a 
-                href="#"
+                href="#demo"
                 className="px-8 py-3 bg-white text-fin-700 font-medium rounded-lg hover:bg-white/90 transition-colors"
               >
-                Get Started Free
+                Try Financial Assistant
               </a>
               <a 
                 href="#"
                 className="px-8 py-3 bg-transparent border border-white/30 text-white font-medium rounded-lg hover:bg-white/10 transition-colors"
               >
-                Request Demo
+                Learn More
               </a>
             </div>
           </div>
