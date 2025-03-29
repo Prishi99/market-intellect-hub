@@ -113,6 +113,22 @@ export default {
 				'type-line': {
           '0%': { width: '0%' },
           '100%': { width: '100%' }
+        },
+        'slide-in-bottom': {
+          '0%': { transform: 'translateY(30px)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' }
+        },
+        'slide-in-right': {
+          '0%': { transform: 'translateX(30px)', opacity: '0' },
+          '100%': { transform: 'translateX(0)', opacity: '1' }
+        },
+        'scale-up': {
+          '0%': { transform: 'scale(0.95)', opacity: '0' },
+          '100%': { transform: 'scale(1)', opacity: '1' }
+        },
+        'pulse-slow': {
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '0.7' }
         }
 			},
 			animation: {
@@ -123,8 +139,17 @@ export default {
 				'float': 'float 5s ease-in-out infinite',
 				'text-shimmer': 'text-shimmer 3s infinite',
 				'background-pulse': 'background-pulse 3s infinite ease-in-out',
-				'type-line': 'type-line 1.5s steps(40, end) forwards'
+				'type-line': 'type-line 1.5s steps(40, end) forwards',
+				'slide-in-bottom': 'slide-in-bottom 0.6s ease-out',
+				'slide-in-right': 'slide-in-right 0.6s ease-out',
+				'scale-up': 'scale-up 0.5s ease-out',
+				'pulse-slow': 'pulse-slow 3s infinite ease-in-out'
 			},
+			boxShadow: {
+				'soft': '0 4px 20px -2px rgba(0, 0, 0, 0.05)',
+				'elegant': '0 10px 30px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+				'glass': '0 8px 32px rgba(0, 0, 0, 0.08)',
+			}
 		}
 	},
 	plugins: [require("tailwindcss-animate")],

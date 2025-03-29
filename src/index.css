@@ -61,7 +61,7 @@
   }
 
   .glass {
-    @apply backdrop-blur-md bg-white/60 border border-white/20 shadow-lg;
+    @apply backdrop-blur-md bg-white/70 border border-white/20 shadow-lg;
   }
   
   .glass-dark {
@@ -84,4 +84,65 @@
   .card-gradient {
     @apply bg-gradient-to-br from-white to-fin-50/80 backdrop-blur-sm;
   }
+  
+  /* New enhanced animations and styles */
+  .hover-lift {
+    @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-lg;
+  }
+  
+  .subtle-border {
+    @apply border border-fin-100/50 hover:border-fin-200/70 transition-colors duration-300;
+  }
+  
+  .shine-effect {
+    @apply relative overflow-hidden;
+  }
+  
+  .shine-effect::after {
+    content: '';
+    @apply absolute top-0 left-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full;
+    animation: shine 2.5s infinite ease-in-out;
+  }
+  
+  .gradient-border {
+    @apply relative rounded-xl p-[1px] bg-gradient-to-br from-fin-100 via-fin-200 to-fin-100;
+  }
+  
+  .gradient-border > div {
+    @apply bg-white rounded-xl h-full w-full;
+  }
+  
+  .btn-gradient {
+    @apply bg-gradient-to-r from-fin-600 to-fin-700 hover:from-fin-700 hover:to-fin-600 transition-all duration-300;
+  }
+}
+
+@keyframes shine {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes float-slow {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes background-pulse {
+  0%, 100% { opacity: 0.1; }
+  50% { opacity: 0.3; }
+}
+
+@keyframes text-shimmer {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 100% 50%; }
+}
+
+@keyframes type-line {
+  0% { width: 0%; }
+  100% { width: 100%; }
 }
