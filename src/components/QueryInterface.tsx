@@ -1,10 +1,9 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { CircleDollarSign, Search, BarChart2, TrendingUp, FileText, Loader2, AlertCircle, RefreshCw } from "lucide-react";
+import { CircleDollarSign, Search, BarChart2, TrendingUp, FileText, Loader2, AlertCircle, RefreshCw, ExternalLink } from "lucide-react";
 import StockCard from "./StockCard";
 import { useToast } from "@/hooks/use-toast";
 import ReactMarkdown from "react-markdown";
@@ -215,7 +214,17 @@ const QueryInterface = () => {
                 h3: ({node, ...props}) => <h3 className="text-lg font-semibold mb-2 text-fin-700" {...props} />,
                 ul: ({node, ...props}) => <ul className="list-disc pl-5 mb-4 space-y-1" {...props} />,
                 li: ({node, ...props}) => <li className="text-foreground/80" {...props} />,
-                a: ({node, ...props}) => <a className="text-fin-600 hover:underline" {...props} />,
+                a: ({node, ...props}) => (
+                  <a 
+                    className="text-fin-600 hover:underline inline-flex items-center" 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    {...props}
+                  >
+                    {props.children}
+                    <ExternalLink className="ml-1 h-3 w-3" />
+                  </a>
+                ),
                 table: ({node, ...props}) => (
                   <div className="overflow-x-auto w-full rounded-lg border border-fin-100 mb-4">
                     <Table>
@@ -227,7 +236,7 @@ const QueryInterface = () => {
                 tbody: ({node, ...props}) => <TableBody>{props.children}</TableBody>,
                 tr: ({node, ...props}) => <TableRow>{props.children}</TableRow>,
                 th: ({node, ...props}) => <TableHead className="bg-fin-50 font-medium text-fin-800">{props.children}</TableHead>,
-                td: ({node, ...props}) => <TableCell className="py-3 text-sm text-fin-800">{props.children}</TableCell>,
+                td: ({node, ...props}) => <TableCell className="py-3 text-sm text-fin-800 whitespace-normal break-words">{props.children}</TableCell>,
                 code: ({node, className, children, ...props}) => {
                   const match = /language-(\w+)/.exec(className || '');
                   const isInline = !match && (props as any).inline;
@@ -245,6 +254,9 @@ const QueryInterface = () => {
             >
               {results}
             </ReactMarkdown>
+            <div className="mt-4 pt-3 border-t border-fin-100">
+              <p className="text-xs text-fin-500">Data obtained from financial sources using Gemini API. Last updated: {new Date().toLocaleString()}</p>
+            </div>
           </CardContent>
         </Card>
       );
@@ -278,7 +290,17 @@ const QueryInterface = () => {
                 h3: ({node, ...props}) => <h3 className="text-lg font-semibold mb-2 text-fin-700" {...props} />,
                 ul: ({node, ...props}) => <ul className="list-disc pl-5 mb-4 space-y-1" {...props} />,
                 li: ({node, ...props}) => <li className="text-foreground/80" {...props} />,
-                a: ({node, ...props}) => <a className="text-fin-600 hover:underline" {...props} />,
+                a: ({node, ...props}) => (
+                  <a 
+                    className="text-fin-600 hover:underline inline-flex items-center" 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    {...props}
+                  >
+                    {props.children}
+                    <ExternalLink className="ml-1 h-3 w-3" />
+                  </a>
+                ),
                 table: ({node, ...props}) => (
                   <div className="overflow-x-auto w-full rounded-lg border border-fin-100 mb-4">
                     <Table>
@@ -290,7 +312,7 @@ const QueryInterface = () => {
                 tbody: ({node, ...props}) => <TableBody>{props.children}</TableBody>,
                 tr: ({node, ...props}) => <TableRow>{props.children}</TableRow>,
                 th: ({node, ...props}) => <TableHead className="bg-fin-50 font-medium text-fin-800">{props.children}</TableHead>,
-                td: ({node, ...props}) => <TableCell className="py-3 text-sm text-fin-800">{props.children}</TableCell>,
+                td: ({node, ...props}) => <TableCell className="py-3 text-sm text-fin-800 whitespace-normal break-words">{props.children}</TableCell>,
                 code: ({node, className, children, ...props}) => {
                   const match = /language-(\w+)/.exec(className || '');
                   const isInline = !match && (props as any).inline;
@@ -309,11 +331,14 @@ const QueryInterface = () => {
               {content}
             </ReactMarkdown>
             
-            {title.toLowerCase().includes('news') && (
-              <div className="mt-2">
-                <Badge variant="outline" className="bg-fin-50 text-fin-700">Latest Updates</Badge>
-              </div>
-            )}
+            <div className="mt-4 pt-3 border-t border-fin-100">
+              <p className="text-xs text-fin-500">Data obtained from financial sources using Gemini API. Last updated: {new Date().toLocaleString()}</p>
+              {title.toLowerCase().includes('news') && (
+                <div className="mt-2">
+                  <Badge variant="outline" className="bg-fin-50 text-fin-700">Latest Updates</Badge>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
       );

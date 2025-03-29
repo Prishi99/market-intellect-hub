@@ -43,9 +43,11 @@ export const queryFinancialAI = async (query: string, stockSymbol?: string): Pro
          - Support/resistance levels
          - Trading patterns identified
 
-         Present the information in a clear, structured format using markdown tables where appropriate. ALWAYS cite your sources with specific URLs. Focus on FACTUAL, CURRENT data only. If you cannot find certain information, clearly state that.
+         Present the information in a clear, structured format using markdown tables where appropriate. ALWAYS cite your sources with specific URLs for each section. Focus on FACTUAL, CURRENT data only. If you cannot find certain information, clearly state that.
          
-         DO NOT make up data. If information is not available, say so. Use only information you can verify from reliable sources.`
+         DO NOT make up data. If information is not available, say so. Use only information you can verify from reliable sources.
+
+         At the end of your analysis, include a "Sources" section that lists all the websites you obtained information from, with full URLs. Use markdown links.`
       : `As a skilled financial analyst, search the web to answer this financial question: "${query}"
          
          Use reliable financial sources such as Yahoo Finance, Google Finance, Bloomberg, MarketWatch, CNBC, and Reuters to find the most current and accurate information.
@@ -59,6 +61,8 @@ export const queryFinancialAI = async (query: string, stockSymbol?: string): Pro
          6. For market trends, include supporting data points and current examples
          
          Your response should be factual, comprehensive, and directly address the user's query. DO NOT make up data. If information is not available, clearly state that.
+         
+         At the end of your analysis, include a "Sources" section that lists all the websites you obtained information from, with full URLs. Use markdown links.
          
          Remember to search for the MOST CURRENT information available today.`;
 
@@ -113,7 +117,24 @@ export const queryFinancialAI = async (query: string, stockSymbol?: string): Pro
     const sourcesInfo = data.candidates[0].citationMetadata?.citationSources?.map(source => ({
       name: source.uri.split('/').pop() || 'Source',
       url: source.uri
-    }));
+    })) || [];
+    
+    // If we don't have citation metadata, try to extract sources from the content
+    if (sourcesInfo.length === 0) {
+      // Try to extract URLs from the content using regex
+      const urlRegex = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/g;
+      const matches = content.match(urlRegex);
+      
+      if (matches) {
+        matches.forEach(url => {
+          const hostname = new URL(url).hostname.replace('www.', '');
+          sourcesInfo.push({
+            name: hostname,
+            url: url
+          });
+        });
+      }
+    }
     
     return { content, sourcesInfo };
   } catch (error) {
