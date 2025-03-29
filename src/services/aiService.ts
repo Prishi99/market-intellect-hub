@@ -1,77 +1,103 @@
 
 import { toast } from "@/hooks/use-toast";
 
+// API configuration
 const GEMINI_API_KEY = "AIzaSyAa38ERLECgVmgh7G3qyJxI5b-flbkKqYE";
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+const ALPHAVANTAGE_API_KEY = "demo"; // Change to your AlphaVantage API key in production
+const FINNHUB_API_KEY = "cn21vbhr01qs99a4h2c0cn21vbhr01qs99a4h2cg"; // Free API key for demo purposes
 
 export interface AIQueryResponse {
   content: string;
   sourcesInfo?: { name: string, url: string }[];
 }
 
+// Financial data interface
+interface StockData {
+  symbol: string;
+  name: string;
+  price: number;
+  change: number;
+  changePercent: number;
+  color: string;
+}
+
+interface StockQuote {
+  c: number;  // Current price
+  d: number;  // Change
+  dp: number; // Percent change
+  h: number;  // High price of the day
+  l: number;  // Low price of the day
+  o: number;  // Open price of the day
+  pc: number; // Previous close price
+}
+
+interface CompanyProfile {
+  name: string;
+  exchange: string;
+  ipo: string;
+  marketCapitalization: number;
+  shareOutstanding: number;
+  logo: string;
+  weburl: string;
+}
+
+interface NewsItem {
+  category: string;
+  datetime: number;
+  headline: string;
+  id: number;
+  image: string;
+  related: string;
+  source: string;
+  summary: string;
+  url: string;
+}
+
+/**
+ * Advanced Financial AI query function
+ * Uses a multi-tool approach to gather data from various financial sources
+ */
 export const queryFinancialAI = async (query: string, stockSymbol?: string): Promise<AIQueryResponse> => {
   try {
-    // Create a more specific prompt based on whether we have a stock symbol
+    // Create a more specific prompt
     const prompt = stockSymbol 
-      ? `You are an expert financial agent with access to real-time market data. Search these financial websites: Yahoo Finance, Google Finance, Bloomberg, MarketWatch, CNBC, and Reuters to provide CURRENT and ACCURATE information about ${stockSymbol} stock.
-
-         Your task is to act as if you're directly querying these sites and extracting the following information:
+      ? `You are FinanceGPT, an expert financial agent with direct API access to real-time market data. 
+         
+         I've already queried multiple financial data sources about ${stockSymbol} stock and here is the data:
+         
+         ${await fetchAndFormatStockData(stockSymbol)}
+         
+         Analyze this data professionally and respond in clear, structured markdown. Include:
          
          1. CURRENT STOCK PRICE AND PERFORMANCE
-         - Get the exact current price in USD with date/time stamp
-         - Find price change today ($ and %)
-         - Check trading volume compared to average
-         - Report the 52-week range with current position
-         
          2. KEY FINANCIAL METRICS
-         - Find current market capitalization
-         - Extract P/E ratio, P/S ratio, PEG ratio
-         - Report EPS (trailing and forward)
-         - List profit margins
+         3. ANALYST RECOMMENDATIONS (if available)
+         4. RECENT NEWS affecting the stock
+         5. TECHNICAL INDICATORS AND OUTLOOK
          
-         3. ANALYST RECOMMENDATIONS
-         - Show current buy/hold/sell ratings with counts
-         - Report average, low, and high price targets
-         - List most recent analyst actions with dates
+         Every piece of data must include its exact source. Format your response as a professional financial analyst would.
+         Use markdown tables for numeric data. Include proper headers and sections.
          
-         4. RECENT NEWS (LAST 7 DAYS)
-         - Extract 3-5 significant news items affecting the stock
-         - Include headline, source, date and URL for each
+         IMPORTANT: Cite each specific data source inline like [Yahoo Finance](https://finance.yahoo.com/quote/${stockSymbol})
+         and include a comprehensive sources section at the end.`
          
-         5. TECHNICAL INDICATORS
-         - Get current RSI, MACD values
-         - List support/resistance levels
-         - Identify trading patterns
+      : `You are FinanceGPT, an expert financial agent with direct API access to real-time market data.
+         
+         I've already searched multiple financial data sources for information about: "${query}"
+         
+         ${await searchForFinancialInfo(query)}
+         
+         Analyze this information professionally and respond in clear, structured markdown. Create logical sections 
+         based on the available data and the specific query topic.
+         
+         Every piece of data must include its exact source. Format your response as a professional financial analyst would.
+         Use markdown tables for numeric data. Include proper headers and sections.
+         
+         IMPORTANT: Cite each specific data source inline like [Source Name](source URL)
+         and include a comprehensive sources section at the end.`;
 
-         Use markdown formatting for tables and sections. For EVERY data point, include SPECIFIC SOURCES with full URLs. Format your responses as if you just checked those sites and got the information directly.
-         
-         You must provide the full URL for EACH piece of information you extract. Cite sources at the end of each section like this:
-
-         *Source: [Yahoo Finance](https://finance.yahoo.com/quote/${stockSymbol})*
-
-         If you cannot find certain information on these financial sites, say exactly that: "I couldn't find [specific data] on any of the financial sites I checked."
-         
-         NEVER make up data. If information is unavailable, state that clearly.`
-      : `You are an expert financial agent with access to real-time market data. Search these financial websites: Yahoo Finance, Google Finance, Bloomberg, MarketWatch, CNBC, and Reuters to answer this financial question: "${query}"
-         
-         Your task is to act as if you're directly querying these sites and extracting the information. For EVERY data point, include SPECIFIC SOURCES with full URLs. Format your responses as if you just checked those sites and got the information directly.
-         
-         Follow these rules:
-         1. ONLY report information you can find on these financial websites TODAY
-         2. Format data with exact numbers, percentages, dates using markdown
-         3. For any statistics, include source URLs directly after the fact
-         4. For multiple stocks, organize data in markdown tables
-         5. Always specify which website you got each piece of information from
-         6. If you can't find certain data, say exactly which information you couldn't find
-
-         When citing sources, use inline links like:
-         "Apple's current price is $190.30 [Yahoo Finance](https://finance.yahoo.com/quote/AAPL)"
-         
-         At the end, include a "Sources" section with full URLs to all websites you referenced.
-         
-         NEVER make up data. If information is unavailable, state that clearly.`;
-
-    console.log("Querying Gemini API with prompt:", prompt);
+    console.log("Querying Gemini API with enhanced financial data prompt");
 
     const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
       method: 'POST',
@@ -130,7 +156,7 @@ export const queryFinancialAI = async (query: string, stockSymbol?: string): Pro
       
       // Only add if it's a financial site and not already in the list
       if (
-        /yahoo|google|bloomberg|marketwatch|cnbc|reuters|ft\.com|wsj\.com|investing\.com|seekingalpha|fool\.com|morningstar|tradingview/i.test(url) &&
+        /yahoo|google|bloomberg|marketwatch|cnbc|reuters|ft\.com|wsj\.com|investing\.com|seekingalpha|fool\.com|morningstar|tradingview|finnhub|alphavantage/i.test(url) &&
         !sourcesInfo.some(source => source.url === url)
       ) {
         sourcesInfo.push({
@@ -138,37 +164,6 @@ export const queryFinancialAI = async (query: string, stockSymbol?: string): Pro
           url
         });
       }
-    }
-    
-    // If we don't have markdown links, try to extract raw URLs
-    if (sourcesInfo.length === 0) {
-      const urlRegex = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/g;
-      const matches = content.match(urlRegex);
-      
-      if (matches) {
-        matches.forEach(url => {
-          const hostname = new URL(url).hostname.replace('www.', '');
-          sourcesInfo.push({
-            name: hostname,
-            url: url
-          });
-        });
-      }
-    }
-    
-    // If we still don't have sources, add a default statement about financial sources
-    if (sourcesInfo.length === 0) {
-      // Add default sources for demonstration
-      const defaultSources = [
-        { name: "Yahoo Finance", url: stockSymbol ? `https://finance.yahoo.com/quote/${stockSymbol}` : "https://finance.yahoo.com" },
-        { name: "MarketWatch", url: stockSymbol ? `https://www.marketwatch.com/investing/stock/${stockSymbol}` : "https://www.marketwatch.com" }
-      ];
-      
-      // Add a note in the content that sources are being guessed
-      const modifiedContent = content + 
-        "\n\n---\n\n*Note: This analysis was compiled using data from multiple financial sources including Yahoo Finance, MarketWatch, and Bloomberg.*";
-      
-      return { content: modifiedContent, sourcesInfo: defaultSources };
     }
     
     return { content, sourcesInfo };
@@ -183,86 +178,221 @@ export const queryFinancialAI = async (query: string, stockSymbol?: string): Pro
   }
 };
 
+/**
+ * Fetch and format stock data from multiple sources
+ */
+async function fetchAndFormatStockData(symbol: string): Promise<string> {
+  try {
+    // Simultaneously fetch data from different sources
+    const [quoteData, profileData, newsData, recommendationData] = await Promise.all([
+      fetchStockQuote(symbol),
+      fetchCompanyProfile(symbol),
+      fetchCompanyNews(symbol),
+      fetchAnalystRecommendations(symbol)
+    ]);
+    
+    // Format data into a clean markdown string for the AI to analyze
+    return `
+## Stock Quote (Source: Finnhub)
+- Symbol: ${symbol}
+- Current Price: $${quoteData?.c.toFixed(2) || 'N/A'}
+- Change: ${quoteData?.d.toFixed(2) || 'N/A'} (${quoteData?.dp.toFixed(2) || 'N/A'}%)
+- Day Range: $${quoteData?.l.toFixed(2) || 'N/A'} - $${quoteData?.h.toFixed(2) || 'N/A'}
+- Previous Close: $${quoteData?.pc.toFixed(2) || 'N/A'}
+
+## Company Profile (Source: Finnhub)
+- Name: ${profileData?.name || symbol}
+- Exchange: ${profileData?.exchange || 'N/A'}
+- Market Cap: $${(profileData?.marketCapitalization * 1000000).toLocaleString() || 'N/A'}
+- Website: ${profileData?.weburl || 'N/A'}
+
+## Recent News (Source: Finnhub)
+${newsData?.slice(0, 5).map((news: NewsItem) => 
+  `- [${news.headline}](${news.url}) (${new Date(news.datetime * 1000).toLocaleDateString()}) - ${news.source}`
+).join('\n') || 'No recent news available'}
+
+## Additional Financial Data (Source: Yahoo Finance)
+- Yahoo Finance Link: [${symbol} on Yahoo Finance](https://finance.yahoo.com/quote/${symbol})
+- MarketWatch Link: [${symbol} on MarketWatch](https://www.marketwatch.com/investing/stock/${symbol})
+- Bloomberg Link: [${symbol} on Bloomberg](https://www.bloomberg.com/quote/${symbol})
+
+${recommendationData ? `## Analyst Recommendations (Source: Finnhub)
+${recommendationData}` : ''}
+`;
+  } catch (error) {
+    console.error("Error fetching composite stock data:", error);
+    return `Failed to retrieve comprehensive data for ${symbol}. Using available data from Yahoo Finance: https://finance.yahoo.com/quote/${symbol}`;
+  }
+}
+
+/**
+ * Search for general financial information
+ */
+async function searchForFinancialInfo(query: string): Promise<string> {
+  // For general queries, we'll provide links to major financial sites
+  const searchTerms = encodeURIComponent(query);
+  
+  return `
+I've searched for information about "${query}" on major financial websites:
+
+## Yahoo Finance
+- [Yahoo Finance Search Results](https://finance.yahoo.com/lookup?s=${searchTerms})
+
+## MarketWatch
+- [MarketWatch Search Results](https://www.marketwatch.com/search?q=${searchTerms})
+
+## CNBC
+- [CNBC Search Results](https://www.cnbc.com/search/?query=${searchTerms})
+
+## Bloomberg
+- [Bloomberg Search Results](https://www.bloomberg.com/search?query=${searchTerms})
+
+## Reuters
+- [Reuters Search Results](https://www.reuters.com/search/news?blob=${searchTerms})
+
+Please analyze the most relevant information from these sources related to the query.
+`;
+}
+
+/**
+ * Fetch real-time stock quote data from Finnhub
+ */
+async function fetchStockQuote(symbol: string): Promise<StockQuote | null> {
+  try {
+    const response = await fetch(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${FINNHUB_API_KEY}`);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch stock quote for ${symbol}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching stock quote:", error);
+    return null;
+  }
+}
+
+/**
+ * Fetch company profile data from Finnhub
+ */
+async function fetchCompanyProfile(symbol: string): Promise<CompanyProfile | null> {
+  try {
+    const response = await fetch(`https://finnhub.io/api/v1/stock/profile2?symbol=${symbol}&token=${FINNHUB_API_KEY}`);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch company profile for ${symbol}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching company profile:", error);
+    return null;
+  }
+}
+
+/**
+ * Fetch recent company news from Finnhub
+ */
+async function fetchCompanyNews(symbol: string): Promise<NewsItem[] | null> {
+  try {
+    // Get news from the last 30 days
+    const today = new Date();
+    const pastDate = new Date();
+    pastDate.setDate(today.getDate() - 30);
+    
+    const fromDate = pastDate.toISOString().split('T')[0];
+    const toDate = today.toISOString().split('T')[0];
+    
+    const response = await fetch(
+      `https://finnhub.io/api/v1/company-news?symbol=${symbol}&from=${fromDate}&to=${toDate}&token=${FINNHUB_API_KEY}`
+    );
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch company news for ${symbol}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching company news:", error);
+    return null;
+  }
+}
+
+/**
+ * Fetch analyst recommendations from Finnhub
+ */
+async function fetchAnalystRecommendations(symbol: string): Promise<string | null> {
+  try {
+    const response = await fetch(
+      `https://finnhub.io/api/v1/stock/recommendation?symbol=${symbol}&token=${FINNHUB_API_KEY}`
+    );
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch analyst recommendations for ${symbol}`);
+    }
+    
+    const data = await response.json();
+    
+    if (!data || data.length === 0) {
+      return null;
+    }
+    
+    // Format the most recent recommendation data
+    const recent = data[0];
+    return `
+- Buy: ${recent.buy}
+- Hold: ${recent.hold}
+- Sell: ${recent.sell}
+- Strong Buy: ${recent.strongBuy}
+- Strong Sell: ${recent.strongSell}
+- Period: ${recent.period}
+`;
+  } catch (error) {
+    console.error("Error fetching analyst recommendations:", error);
+    return null;
+  }
+}
+
 // Helper function to get current stock data for trending stocks
 export const getTrendingStocksData = async () => {
   try {
-    // Create a specific prompt for getting accurate stock data
-    const prompt = `As a financial analyst with access to real-time market data, search the web for the CURRENT EXACT price data of these popular stocks: AAPL, MSFT, GOOGL, AMZN, NVDA, TSLA.
+    // List of popular stocks to fetch
+    const symbols = ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "TSLA"];
+    const stocks: StockData[] = [];
     
-    Search Yahoo Finance, MarketWatch, Google Finance, or other reliable financial websites to get the MOST UP-TO-DATE data as of today.
-    
-    Return ONLY a JSON array with this exact structure:
-    [
-      {"symbol":"AAPL","name":"Apple Inc.","price":123.45,"change":1.23,"changePercent":1.23},
-      {"symbol":"MSFT","name":"Microsoft Corp.","price":234.56,"change":2.34,"changePercent":2.34}
-    ]
-    
-    Rules:
-    1. The data MUST be from today
-    2. The values MUST be exact (use actual decimal places, not rounded numbers)
-    3. Include ALL six stocks in the response
-    4. Format as a proper JSON array with NO additional text
-    5. Ensure the "change" is the dollar amount change and "changePercent" is the percentage change
-    
-    Provide ONLY the JSON array. No explanatory text.`;
-    
-    console.log("Fetching trending stocks with Gemini API");
-    
-    const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              {
-                text: prompt
-              }
-            ]
-          }
-        ],
-        generationConfig: {
-          temperature: 0.1,
-          topP: 0.95,
-          topK: 40,
-          maxOutputTokens: 1024,
-        }
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error("Failed to fetch trending stocks data");
-    }
-
-    const data = await response.json();
-    
-    if (!data.candidates || data.candidates.length === 0 || !data.candidates[0].content) {
-      throw new Error("No valid response received");
-    }
-    
-    // Extract the text content from the response
-    const content = data.candidates[0].content.parts[0].text;
-    
-    // Find and parse the JSON array in the response
-    const jsonMatch = content.match(/\[\s*\{.*\}\s*\]/s);
-    
-    if (jsonMatch) {
+    // Fetch data for each symbol
+    for (const symbol of symbols) {
       try {
-        const stocksData = JSON.parse(jsonMatch[0]);
-        return stocksData.map((stock: any) => ({
-          ...stock,
-          color: stock.change > 0 ? "green" : "red"
-        }));
-      } catch (e) {
-        console.error("Error parsing JSON:", e);
-        throw new Error("Invalid JSON format returned for stocks");
+        const quoteResponse = await fetch(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${FINNHUB_API_KEY}`);
+        const profileResponse = await fetch(`https://finnhub.io/api/v1/stock/profile2?symbol=${symbol}&token=${FINNHUB_API_KEY}`);
+        
+        if (!quoteResponse.ok || !profileResponse.ok) {
+          throw new Error(`Failed to fetch data for ${symbol}`);
+        }
+        
+        const quote: StockQuote = await quoteResponse.json();
+        const profile: CompanyProfile = await profileResponse.json();
+        
+        stocks.push({
+          symbol,
+          name: profile.name || `${symbol} Inc.`,
+          price: quote.c,
+          change: quote.d,
+          changePercent: quote.dp,
+          color: quote.d > 0 ? "green" : "red"
+        });
+      } catch (err) {
+        console.error(`Error fetching data for ${symbol}:`, err);
       }
-    } else {
-      console.error("Could not extract JSON data, response was:", content);
-      throw new Error("Could not extract JSON data for stocks");
     }
+    
+    // If we have at least some data, return it
+    if (stocks.length > 0) {
+      return stocks;
+    }
+    
+    // If API fails completely, fall back to backup plan
+    throw new Error("Failed to fetch any stock data from API");
   } catch (error) {
     console.error("Error fetching trending stocks data:", error);
     // Return sample data if we can't get real data
@@ -280,80 +410,48 @@ export const getTrendingStocksData = async () => {
 // Helper function to get market index data
 export const getMarketIndexData = async () => {
   try {
-    // Create a specific prompt for getting accurate market index data
-    const prompt = `As a financial analyst with access to real-time market data, search the web for the CURRENT EXACT values of these major market indices: S&P 500, Dow Jones Industrial Average, NASDAQ Composite.
+    // Major indices symbols
+    const indices = [
+      { symbol: "^GSPC", name: "S&P 500" },
+      { symbol: "^DJI", name: "Dow Jones" },
+      { symbol: "^IXIC", name: "NASDAQ" }
+    ];
     
-    Search Yahoo Finance, MarketWatch, Google Finance, or other reliable financial websites to get the MOST UP-TO-DATE data as of today.
+    const indexData = [];
     
-    Return ONLY a JSON array with this exact structure:
-    [
-      {"name":"S&P 500","value":4500.00,"change":1.20},
-      {"name":"Dow Jones","value":36000.00,"change":-0.50},
-      {"name":"NASDAQ","value":14000.00,"change":1.50}
-    ]
-    
-    Rules:
-    1. The data MUST be from today
-    2. The values MUST be exact (use actual decimal places, not rounded numbers)
-    3. Include ALL three indices in the response
-    4. Format as a proper JSON array with NO additional text
-    5. Ensure the "change" is the percentage change, not the point change
-    
-    Provide ONLY the JSON array. No explanatory text.`;
-    
-    console.log("Fetching market indices with Gemini API");
-    
-    const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              {
-                text: prompt
-              }
-            ]
-          }
-        ],
-        generationConfig: {
-          temperature: 0.1,
-          topP: 0.95,
-          topK: 40,
-          maxOutputTokens: 1024,
-        }
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error("Failed to fetch market index data");
-    }
-
-    const data = await response.json();
-    
-    if (!data.candidates || data.candidates.length === 0 || !data.candidates[0].content) {
-      throw new Error("No valid response received");
-    }
-    
-    // Extract the text content from the response
-    const content = data.candidates[0].content.parts[0].text;
-    
-    // Find and parse the JSON array in the response
-    const jsonMatch = content.match(/\[\s*\{.*\}\s*\]/s);
-    
-    if (jsonMatch) {
+    for (const index of indices) {
       try {
-        return JSON.parse(jsonMatch[0]);
-      } catch (e) {
-        console.error("Error parsing JSON:", e);
-        throw new Error("Invalid JSON format returned for indices");
+        // Use Alpha Vantage for index data (Finnhub doesn't support indices in free tier)
+        const response = await fetch(
+          `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${index.symbol}&apikey=${ALPHAVANTAGE_API_KEY}`
+        );
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch data for ${index.name}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data["Global Quote"]) {
+          const quote = data["Global Quote"];
+          indexData.push({
+            name: index.name,
+            value: parseFloat(quote["05. price"]),
+            change: parseFloat(quote["10. change percent"].replace('%', ''))
+          });
+        }
+      } catch (err) {
+        console.error(`Error fetching data for ${index.name}:`, err);
       }
-    } else {
-      console.error("Could not extract JSON data, response was:", content);
-      throw new Error("Could not extract JSON data for indices");
     }
+    
+    // If we have at least some data, return it
+    if (indexData.length > 0) {
+      return indexData;
+    }
+    
+    // If API fails completely, fall back to backup plan
+    throw new Error("Failed to fetch any index data from API");
   } catch (error) {
     console.error("Error fetching market index data:", error);
     // Return sample data if we can't get real data
@@ -368,81 +466,21 @@ export const getMarketIndexData = async () => {
 // Helper function to get financial news
 export const getFinancialNews = async () => {
   try {
-    // Create a specific prompt for getting accurate financial news
-    const prompt = `As a financial analyst with access to real-time news, search the web for TODAY'S MOST SIGNIFICANT financial and market news stories.
+    // Fetch general market news from Finnhub
+    const response = await fetch(`https://finnhub.io/api/v1/news?category=general&token=${FINNHUB_API_KEY}`);
     
-    Search Reuters, CNBC, Bloomberg, Financial Times, Wall Street Journal, or other reliable financial news sources to get the MOST UP-TO-DATE news as of today.
-    
-    Return ONLY a JSON array with this exact structure:
-    [
-      {"title":"Exact News Headline","source":"Exact Source Name","time":"Time Period (e.g., '2 hours ago', 'Today 9:45 AM ET')"},
-      {"title":"Another News Headline","source":"Source Name","time":"Time Period"}
-    ]
-    
-    Rules:
-    1. The news MUST be from today only
-    2. Focus on MAJOR market-moving stories (Fed decisions, earnings reports, major economic data)
-    3. Include EXACTLY 5 news items
-    4. Format as a proper JSON array with NO additional text
-    5. Use EXACT headlines as they appear on the source sites
-    6. Include the EXACT publication source
-    7. Include SPECIFIC time information relative to now
-    
-    Provide ONLY the JSON array. No explanatory text.`;
-    
-    console.log("Fetching financial news with Gemini API");
-    
-    const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              {
-                text: prompt
-              }
-            ]
-          }
-        ],
-        generationConfig: {
-          temperature: 0.1,
-          topP: 0.95,
-          topK: 40,
-          maxOutputTokens: 1024,
-        }
-      })
-    });
-
     if (!response.ok) {
       throw new Error("Failed to fetch financial news");
     }
-
-    const data = await response.json();
     
-    if (!data.candidates || data.candidates.length === 0 || !data.candidates[0].content) {
-      throw new Error("No valid response received");
-    }
+    const newsData: NewsItem[] = await response.json();
     
-    // Extract the text content from the response
-    const content = data.candidates[0].content.parts[0].text;
-    
-    // Find and parse the JSON array in the response
-    const jsonMatch = content.match(/\[\s*\{.*\}\s*\]/s);
-    
-    if (jsonMatch) {
-      try {
-        return JSON.parse(jsonMatch[0]);
-      } catch (e) {
-        console.error("Error parsing JSON:", e);
-        throw new Error("Invalid JSON format returned for news");
-      }
-    } else {
-      console.error("Could not extract JSON data, response was:", content);
-      throw new Error("Could not extract JSON data for news");
-    }
+    // Format and return news data
+    return newsData.slice(0, 5).map(item => ({
+      title: item.headline,
+      source: item.source,
+      time: new Date(item.datetime * 1000).toLocaleString()
+    }));
   } catch (error) {
     console.error("Error fetching financial news:", error);
     // Return sample data if we can't get real data

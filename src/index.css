@@ -41,7 +41,7 @@
   }
 
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply bg-gradient-to-br from-fin-50 to-white text-foreground antialiased;
     font-feature-settings: "ss01", "ss02", "cv01", "cv02", "cv03";
   }
 
@@ -85,7 +85,7 @@
     @apply bg-gradient-to-br from-white to-fin-50/80 backdrop-blur-sm;
   }
   
-  /* New enhanced animations and styles */
+  /* Enhanced animations and styles */
   .hover-lift {
     @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-lg;
   }
@@ -115,6 +115,58 @@
   .btn-gradient {
     @apply bg-gradient-to-r from-fin-600 to-fin-700 hover:from-fin-700 hover:to-fin-600 transition-all duration-300;
   }
+  
+  /* New beautiful UI elements */
+  .frosted-glass {
+    @apply bg-white/80 backdrop-blur-lg border border-white/50 shadow-lg;
+  }
+  
+  .floating-card {
+    @apply transition-all duration-500;
+    animation: float 6s ease-in-out infinite;
+  }
+  
+  .glass-morph {
+    @apply bg-white/40 backdrop-blur-md border border-white/30 shadow-lg;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  }
+  
+  .gradient-text {
+    @apply bg-gradient-to-r from-fin-700 to-fin-500 bg-clip-text text-transparent;
+  }
+  
+  .glossy-button {
+    @apply relative overflow-hidden bg-gradient-to-r from-fin-600 to-fin-700 text-white px-6 py-3 rounded-lg shadow-md hover:shadow-lg transition-all duration-300;
+  }
+  
+  .glossy-button::after {
+    content: '';
+    @apply absolute top-0 left-0 right-0 h-1/3 bg-white/20 rounded-t-lg;
+  }
+  
+  .data-card {
+    @apply bg-white rounded-xl border border-fin-100/80 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden;
+  }
+  
+  .data-card-header {
+    @apply bg-gradient-to-r from-fin-50 to-white px-4 py-3 border-b border-fin-100/50;
+  }
+  
+  .financial-table {
+    @apply w-full border-collapse;
+  }
+  
+  .financial-table th {
+    @apply bg-fin-50/70 text-fin-800 text-left px-4 py-2 font-medium border-b border-fin-100;
+  }
+  
+  .financial-table td {
+    @apply px-4 py-2 border-b border-fin-50;
+  }
+  
+  .financial-table tr:hover {
+    @apply bg-fin-50/40;
+  }
 }
 
 @keyframes shine {
@@ -123,7 +175,7 @@
   }
 }
 
-@keyframes float-slow {
+@keyframes float {
   0%, 100% {
     transform: translateY(0);
   }
@@ -145,4 +197,15 @@
 @keyframes type-line {
   0% { width: 0%; }
   100% { width: 100%; }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
